@@ -44,6 +44,24 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
+    @GetMapping("/username/{username}")
+    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+        try {
+            User user = userService.getUserByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No se encontró ningún usuario con el username: " + username);
+            }
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontró ningún usuario con el username: " + username);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al buscar el usuario: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id) {
         User user = userService.getUserById(id);
@@ -61,8 +79,7 @@ public class UserController {
             Map<String, String> errors = result.getFieldErrors().stream()
                     .collect(Collectors.toMap(
                             fieldError -> fieldError.getField(),
-                            fieldError -> fieldError.getDefaultMessage()
-                    ));
+                            fieldError -> fieldError.getDefaultMessage()));
             return ResponseEntity.badRequest().body(errors);
         }
 
@@ -82,8 +99,7 @@ public class UserController {
             Map<String, String> errors = result.getFieldErrors().stream()
                     .collect(Collectors.toMap(
                             fieldError -> fieldError.getField(),
-                            fieldError -> fieldError.getDefaultMessage()
-                    ));
+                            fieldError -> fieldError.getDefaultMessage()));
             return ResponseEntity.badRequest().body(errors);
         }
 
@@ -124,7 +140,6 @@ public class UserController {
         }
     }
 
-
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User user) {
         User updatedUser = userService.updateUser(id, user);
@@ -146,6 +161,5 @@ public class UserController {
         }
         return ResponseEntity.noContent().build();
     }
-
 
 }

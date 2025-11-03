@@ -8,20 +8,39 @@
     </button>
     <div class="header-actions">
       <button class="icon-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.35-4.35"></path>
         </svg>
       </button>
-      
-     
-      <button 
-        *ngIf="isAdmin" 
-        class="icon-btn profile-btn" 
+
+      <button
+        *ngIf="isAdmin"
+        class="icon-btn profile-btn"
         (click)="goToAdmin()"
-        title="Panel de Administración">
-        <div class="avatar admin-avatar" style="background-image: url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80')">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        title="Panel de Administración"
+      >
+        <div
+          class="avatar admin-avatar"
+          style="
+            background-image: url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80');
+          "
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M12 15l-8-4.5V5l8 4.5 8-4.5v5.5L12 15z"></path>
             <path d="M12 15v6"></path>
             <path d="M16 17l4 2"></path>
@@ -30,27 +49,46 @@
         </div>
       </button>
 
-  
-      <button 
-        *ngIf="!isAdmin && authService.isLoggedIn()" 
+      <button
+        *ngIf="!isAdmin && authService.isLoggedIn()"
         class="icon-btn profile-btn"
-        title="Mi Perfil">
-         <div class="avatar user-avatar" style="background-image: url('https://images.unsplash.com/photo-https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkBR87vgXJsiQ1ANzA7J846u0SkSmG7yAKiw&s-d1d0cf377fde?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80')">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        title="Mi Perfil"
+      >
+        <div
+          class="avatar user-avatar"
+          style="
+            background-image: url('https://images.unsplash.com/photo-https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkBR87vgXJsiQ1ANzA7J846u0SkSmG7yAKiw&s-d1d0cf377fde?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80');
+          "
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
       </button>
 
-    
-      <button 
-        *ngIf="!authService.isLoggedIn()" 
+      <button
+        *ngIf="!authService.isLoggedIn()"
         class="icon-btn login-btn"
         (click)="router.navigate(['/auth/login'])"
-        title="Iniciar Sesión">
+        title="Iniciar Sesión"
+      >
         <div class="avatar login-avatar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <polyline points="10 17 15 12 10 7"></polyline>
             <line x1="15" y1="12" x2="3" y2="12"></line>
@@ -58,17 +96,25 @@
         </div>
       </button>
 
-      <button class="icon-btn cart-btn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Reemplazar el botón del carrito existente -->
+      <button class="icon-btn cart-btn" (click)="goToCart()">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <circle cx="9" cy="21" r="1"></circle>
           <circle cx="20" cy="21" r="1"></circle>
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
         </svg>
-        <span class="cart-badge">2</span>
+        <span class="cart-badge" *ngIf="cartItemCount > 0">{{ cartItemCount }}</span>
       </button>
     </div>
   </header>
-  
+
   <!-- Main Content -->
   <div class="main-content">
     <!-- Sidebar -->
@@ -78,36 +124,55 @@
       </div>
       <nav class="sidebar-nav">
         <a routerLink="/store" class="nav-item active">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
             <polyline points="9 22 9 12 15 12 15 22"></polyline>
           </svg>
           <span>Tienda</span>
         </a>
-        
-        
-        
-       
-        <a 
-          *ngIf="!authService.isLoggedIn()" 
-          href="javascript:void(0)" 
+
+        <a
+          *ngIf="!authService.isLoggedIn()"
+          href="javascript:void(0)"
           class="nav-item"
-          (click)="router.navigate(['/auth/login'])">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          (click)="router.navigate(['/auth/login'])"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <polyline points="10 17 15 12 10 7"></polyline>
             <line x1="15" y1="12" x2="3" y2="12"></line>
           </svg>
           <span>Iniciar Sesión</span>
         </a>
-        
-   
-        <a 
-          *ngIf="isAdmin" 
-          href="javascript:void(0)" 
+
+        <a
+          *ngIf="isAdmin"
+          href="javascript:void(0)"
           class="nav-item admin-nav-item"
-          (click)="goToAdmin()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          (click)="goToAdmin()"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path d="M12 15l-8-4.5V5l8 4.5 8-4.5v5.5L12 15z"></path>
             <path d="M12 15v6"></path>
             <path d="M16 17l4 2"></path>
@@ -115,10 +180,17 @@
           </svg>
           <span>Vista Administrador</span>
         </a>
-        
+
         <div class="nav-item expandable" (click)="toggleCategoria()">
           <div class="nav-item-content">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <rect x="3" y="3" width="7" height="7"></rect>
               <rect x="14" y="3" width="7" height="7"></rect>
               <rect x="14" y="14" width="7" height="7"></rect>
@@ -126,37 +198,51 @@
             </svg>
             <span>Categorías</span>
           </div>
-          <svg class="chevron" [class.rotate]="categoriaExpandida" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg
+            class="chevron"
+            [class.rotate]="categoriaExpandida"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </div>
-        
+
         <div class="submenu" [class.open]="categoriaExpandida">
-          <a 
-            href="javascript:void(0)" 
+          <a
+            href="javascript:void(0)"
             class="submenu-item"
             [class.active]="selectedTypeCode === null"
-            (click)="filterByType(null)">
+            (click)="filterByType(null)"
+          >
             Todos los productos
           </a>
-          <a 
+          <a
             *ngFor="let type of productTypes"
-            href="javascript:void(0)" 
+            href="javascript:void(0)"
             class="submenu-item"
             [class.active]="selectedTypeCode === type.typeCode"
-            (click)="filterByType(type.typeCode)">
+            (click)="filterByType(type.typeCode)"
+          >
             {{ type.typeName }}
           </a>
         </div>
 
-       
         <div class="logout-section" *ngIf="authService.isLoggedIn()">
           <div class="nav-divider"></div>
-          <a 
-            href="javascript:void(0)" 
-            class="nav-item logout-item"
-            (click)="logout()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <a href="javascript:void(0)" class="nav-item logout-item" (click)="logout()">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -166,7 +252,7 @@
         </div>
       </nav>
     </aside>
-    
+
     <!-- Router Outlet -->
     <div class="content-area">
       <router-outlet></router-outlet>

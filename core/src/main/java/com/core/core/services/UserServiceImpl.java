@@ -39,7 +39,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getAllUsersActive(){
+    public List<User> getAllUsersActive() {
         return userRepository.findByStatus("A");
     }
 
@@ -53,7 +53,8 @@ public class UserServiceImpl implements UserService {
     public User createUser(User user) {
         // Encriptar contraseña antes de guardar
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        if (user.getStatus() == null) user.setStatus("A");
+        if (user.getStatus() == null)
+            user.setStatus("A");
         return userRepository.save(user);
     }
 
@@ -81,7 +82,6 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         return true;
     }
-
 
     @Override
     public User getUserByUsername(String username) {
@@ -117,13 +117,13 @@ public class UserServiceImpl implements UserService {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // Generación del JWT
     private String generateJwtToken(User user) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
                 .setSubject(user.getUsername())
+                .claim("userId", user.getId())
                 .claim("role", user.getRole())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
@@ -131,7 +131,7 @@ public class UserServiceImpl implements UserService {
                 .compact();
     }
 
-    //PL/SQL
+    // PL/SQL
 
     @Override
     public User createClient(User user, ClientDetail clientDetail) {
@@ -157,15 +157,12 @@ public class UserServiceImpl implements UserService {
                 clientDetail.getAddress(),
                 clientDetail.getDescAddress(),
                 clientDetail.getCity().getCityID(),
-                clientDetail.getDepartment().getDepID()
-        );
+                clientDetail.getDepartment().getDepID());
 
         User createdUser = userRepository.findByUsername(user.getUsername())
                 .orElseThrow(() -> new RuntimeException("No se pudo recuperar el usuario creado"));
 
         return createdUser;
     }
-
-
 
 }

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { InventoryService, InventoryItem } from '../../../../../services/inventory.service';
+import { CartService, CartItemDTO } from '../../../../../services/cart.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -17,11 +18,20 @@ export class ProductDetailComponent implements OnInit {
   error: boolean = false;
   quantity: number = 1;
   selectedImage: string = '';
+  addingToCart: boolean = false;
+  
+  // Sistema de Toast local (igual que en CartComponent)
+  toast = {
+    show: false,
+    message: '',
+    type: 'success' as 'success' | 'error' | 'warning'
+  };
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private inventoryService: InventoryService
+    private inventoryService: InventoryService,
+    private cartService: CartService
   ) {}
 
   ngOnInit(): void {
@@ -77,11 +87,41 @@ export class ProductDetailComponent implements OnInit {
   }
 
   addToCart(): void {
-    if (this.product) {
-      console.log('Agregando al carrito:', {
-        product: this.publicProductData,
+    if (this.product && this.product.product?.proCode) {
+      this.addingToCart = true;
+
+      const currentUserId = this.getCurrentUserId();
+      
+      if (!currentUserId) {
+        console.error('❌ No se pudo obtener el ID del usuario');
+        this.showToast('Error: Usuario no identificado', 'error');
+        this.addingToCart = false;
+        return;
+      }
+
+      const cartItem: CartItemDTO = {
+        userID: currentUserId,
+        proCode: this.product.product.proCode,
         quantity: this.quantity
+      };
+
+      console.log('🛒 Agregando al carrito:', cartItem);
+
+      this.cartService.addToCart(cartItem).subscribe({
+        next: (response) => {
+          console.log('✅ Producto agregado al carrito:', response);
+          this.showToast(`¡${this.quantity} ${this.quantity === 1 ? 'unidad' : 'unidades'} de ${this.publicProductData.nombre} agregada(s) al carrito!`, 'success');
+          this.addingToCart = false;
+        },
+        error: (error) => {
+          console.error('❌ Error al agregar producto al carrito:', error);
+          this.showToast('Error al agregar producto al carrito', 'error');
+          this.addingToCart = false;
+        }
       });
+    } else {
+      console.error('❌ No se puede agregar al carrito: producto no válido');
+      this.showToast('Error: producto no válido', 'error');
     }
   }
 
@@ -91,6 +131,9 @@ export class ProductDetailComponent implements OnInit {
         product: this.publicProductData,
         quantity: this.quantity
       });
+      // Primero agregar al carrito y luego redirigir al checkout
+      this.addToCart();
+      // this.router.navigate(['/checkout']);
     }
   }
 
@@ -100,5 +143,48 @@ export class ProductDetailComponent implements OnInit {
 
   changeImage(imageUrl: string): void {
     this.selectedImage = imageUrl;
+  }
+
+  // Método para obtener el ID del usuario actual desde localStorage
+  private getCurrentUserId(): number | null {
+    try {
+      const userData = localStorage.getItem('user_data');
+      
+      if (userData) {
+        const user = JSON.parse(userData);
+        console.log('👤 Usuario obtenido de localStorage:', user);
+        
+        // El ID está en la propiedad 'id' del objeto principal
+        if (user && user.id) {
+          return user.id;
+        } else {
+          console.error('❌ No se encontró la propiedad "id" en user_data:', user);
+          return null;
+        }
+      } else {
+        console.warn('⚠️ No se encontró user_data en localStorage');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error al obtener user_data del localStorage:', error);
+      return null;
+    }
+  }
+
+  // Métodos para Toast (igual que en CartComponent)
+  showToast(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    this.toast = {
+      show: true,
+      message,
+      type
+    };
+
+    setTimeout(() => {
+      this.toast.show = false;
+    }, 3000);
+  }
+
+  closeToast(): void {
+    this.toast.show = false;
   }
 }
