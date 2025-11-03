@@ -2,37 +2,62 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { InventoryService, ProductType } from '../../../services/inventory.service';
-import { AuthService } from '../../../services/auth.service'; 
+import { AuthService } from '../../../services/auth.service';
+import { CartService } from '../../../services/cart.service';
 
 @Component({
   selector: 'app-store-layout',
   standalone: true,
   imports: [CommonModule, RouterOutlet],
   templateUrl: './store-layout.html',
-  styleUrls: ['./store-layout.css']
+  styleUrls: ['./store-layout.css'],
 })
 export class StoreLayoutComponent implements OnInit {
   menuOpen: boolean = false;
   categoriaExpandida: boolean = false;
   productTypes: ProductType[] = [];
   selectedTypeCode: number | null = null;
-  isAdmin: boolean = false; 
+  isAdmin: boolean = false;
+  cartItemCount: number = 0;
 
   constructor(
     public router: Router,
     public inventoryService: InventoryService,
-    public authService: AuthService 
+    public authService: AuthService,
+    private cartService: CartService
   ) {}
 
   ngOnInit(): void {
     this.loadProductTypes();
-    this.checkUserRole(); 
+    this.checkUserRole();
+    this.loadCartCount();
+  }
+  loadCartCount(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.cartItemCount = 0;
+      return;
+    }
+
+    const userID = this.authService.getUserId();
+    if (userID) {
+      this.cartService.getCartItemCount(userID).subscribe({
+        next: (count: any) => (this.cartItemCount = count),
+        error: (err: any) => console.error('Error cargando contador:', err),
+      });
+    }
+  }
+  goToCart(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+    this.router.navigate(['/store/cart']);
   }
 
   loadProductTypes(): void {
     this.inventoryService.getProductTypes().subscribe({
-      next: (data: any) => this.productTypes = data,
-      error: (err: any) => console.error('Error cargando tipos de producto', err)
+      next: (data: any) => (this.productTypes = data),
+      error: (err: any) => console.error('Error cargando tipos de producto', err),
     });
   }
 
@@ -54,7 +79,6 @@ export class StoreLayoutComponent implements OnInit {
   filterByType(typeCode: number | null): void {
     console.log('🎯 StoreLayout - Filtrando por tipo:', typeCode);
     this.selectedTypeCode = typeCode;
-    
 
     if (this.router.url === '/store') {
       console.log('📍 Ya en /store, aplicando filtro directo');
@@ -62,7 +86,6 @@ export class StoreLayoutComponent implements OnInit {
       this.menuOpen = false;
       return;
     }
-
 
     this.router.navigate(['/store']).then((success) => {
       if (success) {

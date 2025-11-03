@@ -55,7 +55,7 @@ export class Login implements OnInit {
   this.authService.login(this.credentials.username, this.credentials.password).subscribe({
     next: (response) => {
       console.log('Login exitoso');
-      
+      this.authService.debugTokenInfo();
       this.isLoading = false;
       
       

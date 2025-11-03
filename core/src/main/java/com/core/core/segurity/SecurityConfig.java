@@ -18,27 +18,28 @@ import java.util.List;
 
 @Configuration
 public class SecurityConfig {
-    
+
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
-    private CustomAuthEntryPoint  customAuthEntryPoint;
+    private CustomAuthEntryPoint customAuthEntryPoint;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // usamos bean CorsFilter más abajo
+                .cors(cors -> {
+                })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**", "/public/**", "/city/**", "/department/**", "/users/**").permitAll()
-                        .anyRequest().authenticated() // requiere token, pero no roles
-                )
+                        .requestMatchers("/auth/**", "/public/**", "/city/**", "/department/**", "/users/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
+
         return http.build();
     }
 
@@ -48,24 +49,42 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 
-  
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowCredentials(true);
-        
-       
+
+        // Orígenes permitidos
         config.setAllowedOriginPatterns(List.of(
-            "http://localhost:4200",
-            "https://delivery-shop1v-*.vercel.app",
-            "https://delivery-shop1v.vercel.app",
-            "https://*.vercel.app"
-        ));
-        
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        
+                "http://localhost:4200",
+                "https://delivery-shop1v-*.vercel.app",
+                "https://delivery-shop1v.vercel.app",
+                "https://*.vercel.app"));
+
+        // Headers permitidos
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin",
+                "X-Requested-With",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers",
+                "X-XSRF-TOKEN"));
+
+        // Headers expuestos
+        config.setExposedHeaders(List.of(
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials",
+                "Authorization"));
+
+        // Métodos permitidos
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+
+        config.setMaxAge(3600L);
+
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
     }

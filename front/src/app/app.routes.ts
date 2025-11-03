@@ -8,6 +8,7 @@ import { StoreComponent } from './pages/ecommerce/store/store';
 import { AdminLayoutComponent } from './pages/admin/layout/layout';
 import { Dashboard } from './pages/admin/dashboard/dashboard';
 import { AuthGuard } from './guards/auth.guard';
+import { CartComponent } from './pages/ecommerce/cart/cart';
 
 export const routes: Routes = [
   { path: '', component: Principal },
@@ -19,6 +20,7 @@ export const routes: Routes = [
     children: [
       { path: '', component: StoreComponent },
       { path: 'product/:id', component: ProductDetailComponent },
+      { path: 'cart', component: CartComponent },
     ],
   },
   {
