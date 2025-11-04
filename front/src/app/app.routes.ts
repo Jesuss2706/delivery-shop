@@ -9,6 +9,8 @@ import { AdminLayoutComponent } from './pages/admin/layout/layout';
 import { Dashboard } from './pages/admin/dashboard/dashboard';
 import { AuthGuard } from './guards/auth.guard';
 import { CartComponent } from './pages/ecommerce/cart/cart';
+import { CheckoutComponent } from './pages/ecommerce/checkout/checkout';
+import { OrderComponent } from './pages/ecommerce/order/order';
 
 export const routes: Routes = [
   { path: '', component: Principal },
@@ -21,6 +23,9 @@ export const routes: Routes = [
       { path: '', component: StoreComponent },
       { path: 'product/:id', component: ProductDetailComponent },
       { path: 'cart', component: CartComponent },
+      { path: 'checkout', component: CheckoutComponent },
+      { path: 'order', component: OrderComponent },
+      { path: 'order/:orderId', component: OrderComponent }
     ],
   },
   {
@@ -70,6 +75,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin/inventory/register-inventory/register-inventory').then(
             (m) => m.RegisterInventoryComponent
+          ),
+      },
+      {
+        path: 'orders/list',
+        loadComponent: () =>
+          import('./pages/admin/orders/orders-list/orders-list').then(
+            (m) => m.OrdersListComponent
           ),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

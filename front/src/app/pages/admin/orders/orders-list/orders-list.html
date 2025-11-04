@@ -1,0 +1,342 @@
+<div class="admin-orders-container">
+  <!-- Toast Notification -->
+  <div *ngIf="toast.show" class="toast toast-{{toast.type}}">
+    <div class="toast-content">
+      <span class="toast-message">{{ toast.message }}</span>
+      <button (click)="closeToast()" class="toast-close">×</button>
+    </div>
+  </div>
+
+  <!-- Modal de Actualización de Estado -->
+  <div *ngIf="orderToUpdate" class="modal-overlay" (click)="closeStatusModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Actualizar Estado de Orden #{{ orderToUpdate }}</h3>
+        <button (click)="closeStatusModal()" class="modal-close">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="warning-message">
+          <div class="warning-icon">⚠️</div>
+          <p><strong>Actualizando estado de la orden</strong></p>
+          <p>Selecciona el nuevo estado para la orden #{{ orderToUpdate }}</p>
+        </div>
+
+        <div class="form-group">
+          <label for="orderState" class="form-label">Nuevo Estado</label>
+          <select 
+            id="orderState"
+            [(ngModel)]="newOrderState" 
+            class="state-select"
+            [disabled]="updatingOrder">
+            <option *ngFor="let state of availableStates" [value]="state">
+              {{ getOrderStatusText(state) }}
+            </option>
+          </select>
+          
+          <div *ngIf="orderToUpdate" class="state-transition-info">
+            <small>
+              Estado actual: 
+              <span class="status-badge {{ getStatusClass(newOrderState) }}">
+                {{ getOrderStatusText(newOrderState) }}
+              </span>
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button 
+          (click)="closeStatusModal()" 
+          class="btn-secondary"
+          [disabled]="updatingOrder">
+          Cancelar
+        </button>
+        <button 
+          (click)="updateOrderStatus()" 
+          class="btn-primary"
+          [disabled]="updatingOrder"
+          [class.btn-disabled]="updatingOrder">
+          <span *ngIf="updatingOrder" class="loading-text">
+            <div class="small-spinner"></div>
+            Actualizando...
+          </span>
+          <span *ngIf="!updatingOrder"> Actualizar Estado</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Detalle de Orden -->
+  <div *ngIf="showOrderDetail" class="modal-overlay large-modal" (click)="closeOrderDetail()">
+    <div class="modal-container large-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Detalle de Orden #{{ selectedOrder?.ordID }}</h3>
+        <button (click)="closeOrderDetail()" class="modal-close">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <div *ngIf="loadingDetails" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Cargando detalles de la orden...</p>
+        </div>
+
+        <div *ngIf="!loadingDetails && selectedOrder" class="order-detail-content">
+          <!-- Información General -->
+          <section class="detail-section">
+            <h4>Información de la Orden</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Número de Orden:</span>
+                <span class="value">#{{ selectedOrder.ordID }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Estado:</span>
+                <span class="value status-badge {{ getStatusClass(selectedOrder.ordState) }}">
+                  {{ getOrderStatusText(selectedOrder.ordState) }}
+                </span>
+              </div>
+              <div class="info-item">
+                <span class="label">Fecha:</span>
+                <span class="value">{{ formatDate(selectedOrder.ordDate) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Método de Pago:</span>
+                <span class="value">{{ selectedOrder.paymentType }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Total:</span>
+                <span class="value total-amount">{{ formatPrice(selectedOrder.total) }}</span>
+              </div>
+              <div *ngIf="selectedOrder.billCode" class="info-item">
+                <span class="label">Factura:</span>
+                <span class="value">#{{ selectedOrder.billCode }}</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Información del Usuario -->
+          <section *ngIf="selectedOrder.user" class="detail-section">
+            <h4>Información del Cliente</h4>
+            <div class="shipping-info">
+              <div class="shipping-item" *ngIf="selectedOrder.user.fullName">
+                <strong>{{ selectedOrder.user.fullName }}</strong>
+              </div>
+              <div class="shipping-item" *ngIf="selectedOrder.user.address">
+                {{ selectedOrder.user.address }}
+              </div>
+              <div class="shipping-item" *ngIf="selectedOrder.user.city && selectedOrder.user.department">
+                {{ selectedOrder.user.city }}, {{ selectedOrder.user.department }}
+              </div>
+              <div class="shipping-item" *ngIf="selectedOrder.user.phone">
+                📞 {{ selectedOrder.user.phone }}
+              </div>
+              <div class="shipping-item" *ngIf="selectedOrder.user.email">
+                📧 {{ selectedOrder.user.email }}
+              </div>
+            </div>
+          </section>
+
+          <!-- Productos -->
+          <section *ngIf="selectedOrder.items && selectedOrder.items.length > 0" class="detail-section">
+            <h4>Productos ({{ selectedOrder.items.length }})</h4>
+            <div class="products-list">
+              <div *ngFor="let item of selectedOrder.items" class="product-item">
+                <div class="product-image">
+                  <img [src]="item.proImg || 'assets/images/placeholder.jpg'" 
+                      [alt]="item.proName"
+                      class="product-img">
+                </div>
+                <div class="product-details">
+                  <h5>{{ item.proName || 'Producto' }}</h5>
+                  <p class="product-brand">{{ item.proMark || 'Marca no especificada' }}</p>
+                  <p class="product-price">{{ formatPrice(item.unitPrice) }}</p>
+                </div>
+                <div class="product-quantity">
+                  <span>Cantidad: {{ item.quantity || 1 }}</span>
+                </div>
+                <div class="product-subtotal">
+                  <strong>{{ formatPrice(item.subtotal) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen -->
+            <div class="order-summary">
+              <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>{{ formatPrice(selectedOrder.total) }}</span>
+              </div>
+              <div class="summary-row">
+                <span>Envío:</span>
+                <span class="free-shipping">Gratis</span>
+              </div>
+              <div class="summary-row total">
+                <span><strong>Total:</strong></span>
+                <span><strong>{{ formatPrice(selectedOrder.total) }}</strong></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Acciones del Admin -->
+          <section class="detail-actions">
+            <button 
+              (click)="openStatusModal(selectedOrder)" 
+              class="btn-primary">
+               Cambiar Estado
+            </button>
+            <button 
+              (click)="closeOrderDetail()" 
+              class="btn-secondary">
+              Cerrar
+            </button>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Principal -->
+  <div class="admin-orders-view">
+    <header class="admin-header">
+      <div class="header-content">
+        <h1>Gestión de Órdenes</h1>
+        <p>Administra y actualiza el estado de todas las órdenes del sistema</p>
+      </div>
+      <div class="header-actions">
+        <button (click)="goToDashboard()" class="btn-secondary">
+          ← Volver al Dashboard
+        </button>
+        <button (click)="loadAllOrders()" class="btn-outline" [disabled]="loading">
+           Actualizar
+        </button>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Cargando todas las órdenes...</p>
+    </div>
+
+    <!-- Contenido cuando no está loading -->
+    <div *ngIf="!loading" class="admin-content">
+      
+      <!-- Filtros y Búsqueda -->
+      <div class="filters-section">
+        <div class="search-box">
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            (input)="applyFilters()"
+            placeholder="Buscar por ID, total o método de pago..."
+            class="search-input">
+        </div>
+        
+        <div class="filter-group">
+          <select [(ngModel)]="filterStatus" (change)="applyFilters()" class="status-filter">
+            <option value="all">Todos los estados</option>
+            <option value="Pending">Pendientes</option>
+            <option value="Processing">Procesando</option>
+            <option value="Shipped">Enviados</option>
+            <option value="Delivered">Entregados</option>
+            <option value="Cancelled">Cancelados</option>
+          </select>
+        </div>
+
+        <div class="stats-box">
+          <span class="total-count">{{ totalOrders }} órdenes</span>
+          <span *ngIf="filterStatus !== 'all'" class="filtered-count">
+            (filtradas)
+          </span>
+        </div>
+      </div>
+
+      <!-- Lista de Órdenes -->
+      <div *ngIf="filteredOrders.length > 0" class="orders-table-container">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th>Total</th>
+              <th>Método Pago</th>
+              <th>Items</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let order of paginatedOrders" class="order-row">
+              <td class="order-id">
+                <a href="javascript:void(0)" (click)="viewOrderDetail(order.ordID)" class="order-link">
+                  #{{ order.ordID }}
+                </a>
+              </td>
+              <td>
+                <span class="status-badge {{ getStatusClass(order.ordState) }}">
+                  {{ getOrderStatusText(order.ordState) }}
+                </span>
+              </td>
+              <td class="order-date">{{ formatDate(order.ordDate) }}</td>
+              <td class="order-total">{{ formatPrice(order.total) }}</td>
+              <td class="payment-type">{{ order.paymentType }}</td>
+              <td class="item-count">{{ order.itemCount }}</td>
+              <td class="actions">
+                <button 
+                  (click)="openStatusModal(order)" 
+                  class="btn-outline btn-sm"
+                  title="Cambiar estado"
+                  [disabled]="order.ordState === 'Delivered' || order.ordState === 'Cancelled'">
+                   Estado
+                </button>
+                <button 
+                  (click)="viewOrderDetail(order.ordID)" 
+                  class="btn-secondary btn-sm"
+                  title="Ver detalles">
+                   Detalles
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Paginación -->
+        <div *ngIf="totalPages > 1" class="pagination">
+          <button 
+            (click)="changePage(currentPage - 1)" 
+            [disabled]="currentPage === 1"
+            class="page-btn">
+            ← Anterior
+          </button>
+          
+          <span class="page-info">
+            Página {{ currentPage }} de {{ totalPages }}
+          </span>
+          
+          <button 
+            (click)="changePage(currentPage + 1)" 
+            [disabled]="currentPage === totalPages"
+            class="page-btn">
+            Siguiente →
+          </button>
+        </div>
+      </div>
+
+      <!-- Mensaje cuando no hay órdenes -->
+      <div *ngIf="!loading && filteredOrders.length === 0" class="no-orders">
+        <div class="no-orders-icon">📦</div>
+        <h3>No se encontraron órdenes</h3>
+        <p *ngIf="filterStatus !== 'all' || searchTerm">
+          Intenta cambiar los filtros de búsqueda
+        </p>
+        <p *ngIf="filterStatus === 'all' && !searchTerm">
+          No hay órdenes en el sistema
+        </p>
+        <button (click)="loadAllOrders()" class="btn-primary">
+           Recargar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

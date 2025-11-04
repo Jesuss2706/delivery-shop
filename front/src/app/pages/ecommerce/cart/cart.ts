@@ -3,6 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CartService, Cart, CartResponse, CartItemDTO } from '../../../services/cart.service';
 import { AuthService } from '../../../services/auth.service';
+import { InventoryService, InventoryItem } from '../../../services/inventory.service';
+import { forkJoin } from 'rxjs';
+
+// Interface extendida para incluir información de stock
+interface CartItemWithStock extends Cart {
+  availableStock?: number;
+}
 
 @Component({
   selector: 'app-cart',
@@ -12,7 +19,7 @@ import { AuthService } from '../../../services/auth.service';
   styleUrls: ['./cart.css']
 })
 export class CartComponent implements OnInit {
-  cartItems: Cart[] = [];
+  cartItems: CartItemWithStock[] = [];
   totalAmount: number = 0;
   itemCount: number = 0;
   loading: boolean = false;
@@ -37,6 +44,7 @@ export class CartComponent implements OnInit {
   constructor(
     private cartService: CartService,
     private authService: AuthService,
+    private inventoryService: InventoryService,
     private router: Router
   ) {}
 
@@ -59,10 +67,16 @@ export class CartComponent implements OnInit {
 
     this.cartService.getCartByUser(userID).subscribe({
       next: (response: CartResponse) => {
-        this.cartItems = response.items;
         this.totalAmount = response.total;
         this.itemCount = response.itemCount;
-        this.loading = false;
+        
+        // Si el carrito tiene items, cargar el stock de cada producto
+        if (response.items && response.items.length > 0) {
+          this.loadStockForCartItems(response.items);
+        } else {
+          this.cartItems = [];
+          this.loading = false;
+        }
       },
       error: (err) => {
         console.error('Error cargando carrito:', err);
@@ -78,7 +92,46 @@ export class CartComponent implements OnInit {
     });
   }
 
-  incrementQuantity(item: Cart): void {
+  // Cargar el stock disponible para cada item del carrito
+  loadStockForCartItems(items: Cart[]): void {
+    // Obtener todo el inventario disponible
+    this.inventoryService.getAvailableInventory().subscribe({
+      next: (inventory: InventoryItem[]) => {
+        // Mapear los items del carrito con su stock correspondiente
+        this.cartItems = items.map(cartItem => {
+          // Buscar el item del inventario que corresponde a este producto
+          const inventoryItem = inventory.find(
+            inv => inv.product.proCode === cartItem.proCode.proCode
+          );
+          
+          return {
+            ...cartItem,
+            availableStock: inventoryItem?.invStock || 0
+          };
+        });
+        
+        console.log('🛒 Cart items con stock:', this.cartItems);
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error cargando inventario para stock:', err);
+        // Si falla, mostrar los items sin información de stock
+        this.cartItems = items.map(item => ({ ...item, availableStock: 0 }));
+        this.showToast('Advertencia: No se pudo cargar información de stock', 'warning');
+        this.loading = false;
+      }
+    });
+  }
+
+  incrementQuantity(item: CartItemWithStock): void {
+    // Validar stock disponible antes de incrementar
+    const stockDisponible = item.availableStock || 0;
+    
+    if (item.quantity >= stockDisponible) {
+      this.showToast(`Stock máximo alcanzado (${stockDisponible} disponibles)`, 'warning');
+      return;
+    }
+
     this.loading = true;
     this.cartService.updateCartQuantity(item.cartID, item.quantity + 1).subscribe({
       next: () => {
@@ -87,13 +140,18 @@ export class CartComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error actualizando cantidad:', err);
-        this.showToast('Error al actualizar cantidad', 'error');
+        // Manejar error específico de stock insuficiente
+        if (err.status === 400 && err.error?.message?.includes('stock')) {
+          this.showToast('No hay suficiente stock disponible', 'warning');
+        } else {
+          this.showToast('Error al actualizar cantidad', 'error');
+        }
         this.loading = false;
       }
     });
   }
 
-  decrementQuantity(item: Cart): void {
+  decrementQuantity(item: CartItemWithStock): void {
     if (item.quantity <= 1) {
       this.showToast('La cantidad mínima es 1', 'warning');
       return;
@@ -113,7 +171,7 @@ export class CartComponent implements OnInit {
     });
   }
 
-  removeItem(item: Cart): void {
+  removeItem(item: CartItemWithStock): void {
     this.showModal(
       'Eliminar producto',
       `¿Estás seguro de eliminar <strong>"${item.proCode.proName}"</strong> del carrito?`,
@@ -167,28 +225,30 @@ export class CartComponent implements OnInit {
   }
 
   proceedToCheckout(): void {
-    if (this.cartItems.length === 0) {
-      this.showToast('El carrito está vacío', 'warning');
-      return;
-    }
-
-    const userID = this.authService.getUserId();
-    if (!userID) return;
-
-    this.cartService.checkCartAvailability(userID).subscribe({
-      next: (response) => {
-        if (response.available) {
-          this.router.navigate(['/checkout']);
-        } else {
-          this.showToast(response.message, 'error');
-        }
-      },
-      error: (err) => {
-        console.error('Error verificando disponibilidad:', err);
-        this.showToast('Error al verificar disponibilidad', 'error');
-      }
-    });
+  if (this.cartItems.length === 0) {
+    this.showToast('El carrito está vacío', 'warning');
+    return;
   }
+
+
+  const itemsWithoutStock = this.cartItems.filter(item => 
+    item.availableStock !== undefined && item.quantity > item.availableStock
+  );
+
+  if (itemsWithoutStock.length > 0) {
+    const productNames = itemsWithoutStock.map(item => item.proCode.proName).join(', ');
+    this.showToast(`Advertencia: Los siguientes productos pueden no tener stock suficiente: ${productNames}. Puedes continuar pero la compra podría fallar.`, 'warning');
+    
+
+    if (confirm('¿Deseas continuar al checkout de todas formas?')) {
+      this.router.navigate(['/checkout']);
+    }
+    return;
+  }
+
+
+  this.router.navigate(['/store/checkout']);
+}
 
   goBack(): void {
     this.router.navigate(['/store']);

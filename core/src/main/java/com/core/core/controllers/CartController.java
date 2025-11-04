@@ -29,29 +29,29 @@ public class CartController {
     // ============= ENDPOINTS JPA NORMALES =============
 
     @GetMapping("/user/{userID}")
-public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
-    try {
-        List<Cart> cartItems = cartService.getCartByUser(userID);
-        
-        BigDecimal total = cartService.calculateCartTotal(userID);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("items", cartItems != null ? cartItems : new ArrayList<>());
-        response.put("total", total != null ? total : BigDecimal.ZERO);
-        response.put("itemCount", cartItems != null ? cartItems.size() : 0);
-        
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("items", new ArrayList<>());
-        errorResponse.put("total", BigDecimal.ZERO);
-        errorResponse.put("itemCount", 0);
-        errorResponse.put("error", "Error al obtener el carrito: " + e.getMessage());
-        
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorResponse);
+    public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
+        try {
+            List<Cart> cartItems = cartService.getCartByUser(userID);
+            
+            BigDecimal total = cartService.calculateCartTotal(userID);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("items", cartItems != null ? cartItems : new ArrayList<>());
+            response.put("total", total != null ? total : BigDecimal.ZERO);
+            response.put("itemCount", cartItems != null ? cartItems.size() : 0);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("items", new ArrayList<>());
+            errorResponse.put("total", BigDecimal.ZERO);
+            errorResponse.put("itemCount", 0);
+            errorResponse.put("error", "Error al obtener el carrito: " + e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse);
+        }
     }
-}
 
     @PostMapping
     public ResponseEntity<?> addToCart(@Valid @RequestBody CartItemDTO cartItemDTO, 
@@ -132,6 +132,25 @@ public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al calcular total: " + e.getMessage());
+        }
+    }
+
+    // ============= ENDPOINTS DE VERIFICACIÓN DE DISPONIBILIDAD =============
+
+    /**
+     * Verificar disponibilidad del carrito (método recomendado)
+     * GET /cart/user/{userID}/check-availability
+     */
+    @GetMapping("/user/{userID}/check-availability")
+    public ResponseEntity<?> checkCartAvailability(@PathVariable Long userID) {
+        try {
+            Map<String, Object> result = cartService.verificarDisponibilidadCarritoCompleto(userID);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("available", false);
+            error.put("message", "Error verificando disponibilidad: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
@@ -228,5 +247,16 @@ public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error al verificar disponibilidad (PL/SQL): " + e.getMessage());
         }
+    }
+
+    // ============= ENDPOINT DE HEALTH CHECK =============
+    
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> healthCheck() {
+        Map<String, String> health = new HashMap<>();
+        health.put("status", "UP");
+        health.put("service", "Cart Service");
+        health.put("timestamp", java.time.LocalDateTime.now().toString());
+        return ResponseEntity.ok(health);
     }
 }

@@ -1,0 +1,275 @@
+<div class="order-container">
+  <!-- Toast Notification -->
+  <div *ngIf="toast.show" class="toast toast-{{toast.type}}">
+    <div class="toast-content">
+      <span class="toast-message">{{ toast.message }}</span>
+      <button (click)="closeToast()" class="toast-close">×</button>
+    </div>
+  </div>
+
+
+<div *ngIf="showCancelModal" class="modal-overlay" (click)="closeCancelModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Cancelar Orden #{{ orderToCancel }}</h3>
+      <button 
+        (click)="closeCancelModal()" 
+        class="modal-close"
+        [disabled]="cancelling">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="cancelReason" class="form-label">
+          Razón de cancelación <span class="required">*</span>
+        </label>
+        <textarea 
+          id="cancelReason"
+          [(ngModel)]="cancelReason" 
+          placeholder="Por favor, describe la razón de la cancelación..."
+          class="reason-textarea"
+          rows="4"
+          maxlength="500"
+          [disabled]="cancelling"
+          (keydown.enter)="$event.preventDefault(); confirmCancel()">
+        </textarea>
+        <div class="char-counter">{{ cancelReason.length }}/500</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button 
+        (click)="closeCancelModal()" 
+        class="btn-secondary"
+        [disabled]="cancelling">
+        Cerrar
+      </button>
+      <button 
+        (click)="confirmCancel()" 
+        class="btn-danger"
+        [disabled]="!cancelReason.trim() || cancelling"
+        [class.btn-disabled]="!cancelReason.trim() || cancelling">
+        <span *ngIf="cancelling" class="loading-text">
+          <div class="small-spinner"></div>
+          Cancelando...
+        </span>
+        <span *ngIf="!cancelling">❌ Cancelar Orden</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+  <div class="order-history-view">
+    <header class="history-header">
+      <h1>Mis Órdenes</h1>
+      <p>Gestiona y revisa el estado de tus pedidos</p>
+    </header>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Cargando historial de órdenes...</p>
+    </div>
+
+    <!-- Contenido cuando no está loading -->
+    <div *ngIf="!loading" class="history-content">
+      
+      <!-- Filtros y Búsqueda -->
+      <div class="filters-section">
+        <div class="search-box">
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm" 
+            placeholder="Buscar por ID de orden..."
+            class="search-input">
+        </div>
+        
+        <div class="filter-group">
+          <select [(ngModel)]="filterStatus" class="status-filter">
+            <option value="all">Todos los estados</option>
+            <option value="Pending">Pendientes</option>
+            <option value="Processing">Procesando</option>
+            <option value="Shipped">Enviados</option>
+            <option value="Delivered">Entregados</option>
+            <option value="Cancelled">Cancelados</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Lista de Órdenes -->
+      <div *ngIf="filteredOrders.length > 0" class="orders-list">
+        <div *ngFor="let order of filteredOrders" class="order-card">
+          
+
+          <div class="order-header" (click)="toggleOrderDetail(order.ordID)">
+            <div class="order-basic-info">
+              <div class="order-id-date">
+                <h3>Orden #{{ order.ordID }}</h3>
+                <span class="order-date">{{ formatDate(order.ordDate) }}</span>
+              </div>
+              <div class="order-status-price">
+                <span class="status-badge {{ getStatusClass(order.ordState) }}">
+                  {{ getOrderStatusText(order.ordState) }}
+                </span>
+                <span class="order-total">{{ formatPrice(order.total) }}</span>
+              </div>
+            </div>
+            <div class="order-toggle">
+              <span class="toggle-icon">{{ isOrderExpanded(order.ordID) ? '−' : '+' }}</span>
+            </div>
+          </div>
+
+          <!-- Detalle de la Orden (expandible) -->
+          <div *ngIf="isOrderExpanded(order.ordID)" class="order-detail-expanded">
+            
+            <!-- Loading del detalle -->
+            <div *ngIf="isLoadingDetail(order.ordID)" class="detail-loading">
+              <div class="small-spinner"></div>
+              <span>Cargando detalles...</span>
+            </div>
+
+            <!-- Contenido del detalle -->
+            <div *ngIf="!isLoadingDetail(order.ordID) && getOrderDetail(order.ordID)" 
+                 class="detail-content">
+              
+              <!-- Información General -->
+              <section class="detail-section">
+                <h4>Información de la Orden</h4>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="label">Número de Orden:</span>
+                    <span class="value">#{{ order.ordID }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Estado:</span>
+                    <span class="value status-badge {{ getStatusClass(order.ordState) }}">
+                      {{ getOrderStatusText(order.ordState) }}
+                    </span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Fecha:</span>
+                    <span class="value">{{ formatDate(order.ordDate) }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Método de Pago:</span>
+                    <span class="value">{{ order.paymentType }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Cantidad de Items:</span>
+                    <span class="value">{{ order.itemCount }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Total:</span>
+                    <span class="value total-amount">{{ formatPrice(order.total) }}</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Información de Envío -->
+              <section *ngIf="getOrderDetail(order.ordID)?.user" class="detail-section">
+                <h4>Información de Envío</h4>
+                <div class="shipping-info">
+                  <div class="shipping-item" *ngIf="getOrderDetail(order.ordID)?.user?.fullName">
+                    <strong>{{ getOrderDetail(order.ordID)?.user?.fullName }}</strong>
+                  </div>
+                  <div class="shipping-item" *ngIf="getOrderDetail(order.ordID)?.user?.address">
+                    {{ getOrderDetail(order.ordID)?.user?.address }}
+                  </div>
+                  <div class="shipping-item" 
+                       *ngIf="getOrderDetail(order.ordID)?.user?.city && getOrderDetail(order.ordID)?.user?.department">
+                    {{ getOrderDetail(order.ordID)?.user?.city }}, {{ getOrderDetail(order.ordID)?.user?.department }}
+                  </div>
+                  <div class="shipping-item" *ngIf="getOrderDetail(order.ordID)?.user?.phone">
+                    📞 {{ getOrderDetail(order.ordID)?.user?.phone }}
+                  </div>
+                  <div class="shipping-item" *ngIf="getOrderDetail(order.ordID)?.user?.email">
+                    📧 {{ getOrderDetail(order.ordID)?.user?.email }}
+                  </div>
+                </div>
+              </section>
+
+              <!-- Productos -->
+              <section *ngIf="getOrderDetail(order.ordID)?.items && getOrderDetail(order.ordID)?.items!.length > 0" 
+                       class="detail-section">
+                <h4>Productos ({{ getOrderDetail(order.ordID)?.items!.length }})</h4>
+                <div class="products-list">
+                  <div *ngFor="let item of getOrderDetail(order.ordID)?.items" class="product-item">
+                    <div class="product-image">
+                      <img [src]="item.proImg || 'assets/images/placeholder.jpg'" 
+                          [alt]="item.proName"
+                          class="product-img">
+                    </div>
+                    <div class="product-details">
+                      <h5>{{ item.proName || 'Producto' }}</h5>
+                      <p class="product-brand">{{ item.proMark || 'Marca no especificada' }}</p>
+                      <p class="product-price">{{ formatPrice(item.unitPrice) }}</p>
+                    </div>
+                    <div class="product-quantity">
+                      <span>Cantidad: {{ item.quantity || 1 }}</span>
+                    </div>
+                    <div class="product-subtotal">
+                      <strong>{{ formatPrice(item.subtotal) }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Resumen -->
+                <div class="order-summary">
+                  <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>{{ formatPrice(order.total) }}</span>
+                  </div>
+                  <div class="summary-row">
+                    <span>Envío:</span>
+                    <span class="free-shipping">Gratis</span>
+                  </div>
+                  <div class="summary-row total">
+                    <span><strong>Total:</strong></span>
+                    <span><strong>{{ formatPrice(order.total) }}</strong></span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Acciones -->
+              <section class="detail-actions">
+                <button 
+                  *ngIf="canCancelOrder(order)"
+                  (click)="openCancelModal(order.ordID)" 
+                  class="btn-danger">
+                   Cancelar Orden
+                </button>
+                
+               
+              </section>
+            </div>
+
+            <!-- Error cargando detalle -->
+            <div *ngIf="!isLoadingDetail(order.ordID) && !getOrderDetail(order.ordID)" 
+                 class="detail-error">
+              <p>No se pudieron cargar los detalles de la orden.</p>
+              <button (click)="loadOrderDetail(order.ordID)" class="btn-retry">
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mensaje cuando no hay órdenes -->
+      <div *ngIf="!loading && filteredOrders.length === 0" class="no-orders">
+        <div class="no-orders-icon">📦</div>
+        <h3>No se encontraron órdenes</h3>
+        <p *ngIf="filterStatus !== 'all' || searchTerm">
+          Intenta cambiar los filtros de búsqueda
+        </p>
+        <p *ngIf="filterStatus === 'all' && !searchTerm">
+          Aún no has realizado ninguna orden
+        </p>
+        <button (click)="goToStore()" class="btn-primary">
+          Ir a la Tienda
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,5 @@
 <div class="products-container">
-  <!-- Header -->
+  <!-- Header (mantener igual) -->
   <header class="header">
     <button class="menu-btn" (click)="toggleMenu()">
       <span class="hamburger"></span>
@@ -96,7 +96,7 @@
         </div>
       </button>
 
-      <!-- Reemplazar el botón del carrito existente -->
+      <!-- Botón del carrito -->
       <button class="icon-btn cart-btn" (click)="goToCart()">
         <svg
           width="24"
@@ -123,7 +123,12 @@
         <h2>Productos</h2>
       </div>
       <nav class="sidebar-nav">
-        <a routerLink="/store" class="nav-item active">
+        <a
+          href="javascript:void(0)"
+          class="nav-item"
+          [class.active]="router.url === '/store'"
+          (click)="goToStore()"
+        >
           <svg
             width="20"
             height="20"
@@ -181,6 +186,27 @@
           <span>Vista Administrador</span>
         </a>
 
+        <a
+          *ngIf="authService.isLoggedIn() && !isAdmin"
+          href="javascript:void(0)"
+          class="nav-item orders-nav-item"
+          [class.active]="router.url.startsWith('/store/order')"
+          (click)="goToOrders()"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M6 2L3 6v14a2 2 0 0 1 2 2h14a2 2 0 0 1 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span>Mis Compras</span>
+        </a>
         <div class="nav-item expandable" (click)="toggleCategoria()">
           <div class="nav-item-content">
             <svg

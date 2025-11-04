@@ -13,7 +13,7 @@ export class AdminLayoutComponent {
   inventarioExpanded = false;
   productosExpanded = false;
 
-  constructor(private router: Router, private authService: AuthService) {}
+  constructor(public router: Router, private authService: AuthService) {}
 
   toggleInventario(): void {
     this.inventarioExpanded = !this.inventarioExpanded;

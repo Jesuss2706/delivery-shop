@@ -1,0 +1,247 @@
+<div class="checkout-container">
+  <!-- Toast Notification -->
+  <div *ngIf="toast.show" class="toast toast-{{toast.type}}">
+    <div class="toast-content">
+      <span class="toast-message">{{ toast.message }}</span>
+      <button (click)="closeToast()" class="toast-close">×</button>
+    </div>
+  </div>
+
+  <!-- Pantalla principal de checkout -->
+  <div *ngIf="!showInvoice" class="checkout-main">
+    <header class="checkout-header">
+      <button (click)="goBackToCart()" class="btn-back">
+        ← Volver al Carrito
+      </button>
+      <h1>Finalizar Compra</h1>
+      <p>Revise su pedido y complete la información</p>
+    </header>
+
+    <div class="checkout-content">
+      <!-- Resumen del Pedido -->
+      <section class="order-summary">
+        <h2>Resumen del Pedido</h2>
+        <div *ngIf="loading" class="loading">Cargando carrito...</div>
+        
+        <div *ngIf="!loading && cartItems.length > 0" class="cart-items">
+          <div *ngFor="let item of cartItems" class="cart-item">
+            <div class="item-image">
+              <img [src]="item.proCode.proImg || 'assets/images/placeholder.jpg'" 
+                   [alt]="item.proCode.proName"
+                   class="product-img">
+            </div>
+            <div class="item-details">
+              <h4>{{ item.proCode.proName }}</h4>
+              <p class="item-brand">{{ item.proCode.proMark }}</p>
+              <p class="item-price">{{ formatPrice(item.proCode.proPrice) }}</p>
+            </div>
+            <div class="item-quantity">
+              <span>Cantidad: {{ item.quantity }}</span>
+            </div>
+            <div class="item-subtotal">
+              <strong>{{ formatPrice(item.quantity * item.proCode.proPrice) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-total">
+          <div class="total-line">
+            <span>Subtotal:</span>
+            <span>{{ formatPrice(totalAmount) }}</span>
+          </div>
+          <div class="total-line">
+            <span>Envío:</span>
+            <span>Gratis</span>
+          </div>
+          <div class="total-line final">
+            <span><strong>Total:</strong></span>
+            <span><strong>{{ formatPrice(totalAmount) }}</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Información de Envío -->
+      <section class="shipping-info">
+        <div class="section-header">
+          <h2>Información de Envío</h2>
+          <button (click)="editShippingInfo()" class="btn-edit" type="button">
+            ✏️ Editar
+          </button>
+        </div>
+        
+        <div *ngIf="hasCompleteClientInfo()" class="shipping-details-card">
+          <div class="shipping-field">
+            <label>Nombre Completo:</label>
+            <p><strong>{{ shippingInfo.fullName }}</strong></p>
+          </div>
+          
+          <div class="shipping-field">
+            <label>Dirección de Envío:</label>
+            <p>{{ getFormattedAddress() }}</p>
+          </div>
+          
+          <div class="shipping-field">
+            <label>Teléfono de Contacto:</label>
+            <p>{{ shippingInfo.phone }}</p>
+          </div>
+          
+          <div class="shipping-notice">
+            <p>📦 Los productos serán enviados a esta dirección</p>
+          </div>
+        </div>
+
+        <div *ngIf="!hasCompleteClientInfo()" class="warning-card">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-content">
+            <h4>Información de envío incompleta</h4>
+            <p>Para completar tu compra, necesitamos tu información de envío.</p>
+            <button (click)="editShippingInfo()" class="btn-warning">
+              Completar Perfil
+            </button>
+          </div>
+        </div>
+
+        
+      </section>
+
+      <!-- Método de Pago -->
+      <section class="payment-method">
+        <h2>Método de Pago</h2>
+        <div class="payment-options">
+          <label class="payment-option" [class.selected]="paymentMethod === 'TARJETA'">
+            <input type="radio" 
+                   name="payment" 
+                   value="TARJETA" 
+                   [(ngModel)]="paymentMethod">
+            <div class="payment-content">
+              <span class="payment-icon">💳</span>
+              <div class="payment-text">
+                <span class="payment-title">Tarjeta de Crédito/Débito</span>
+                <span class="payment-desc">Pago seguro con tu tarjeta</span>
+              </div>
+            </div>
+          </label>
+
+          <label class="payment-option" [class.selected]="paymentMethod === 'EFECTIVO'">
+            <input type="radio" 
+                   name="payment" 
+                   value="EFECTIVO" 
+                   [(ngModel)]="paymentMethod">
+            <div class="payment-content">
+              <span class="payment-icon">💰</span>
+              <div class="payment-text">
+                <span class="payment-title">Pago en Efectivo</span>
+                <span class="payment-desc">Paga al momento de la entrega</span>
+              </div>
+            </div>
+          </label>
+
+          <label class="payment-option" [class.selected]="paymentMethod === 'TRANSFERENCIA'">
+            <input type="radio" 
+                   name="payment" 
+                   value="TRANSFERENCIA" 
+                   [(ngModel)]="paymentMethod">
+            <div class="payment-content">
+              <span class="payment-icon">🏦</span>
+              <div class="payment-text">
+                <span class="payment-title">Transferencia Bancaria</span>
+                <span class="payment-desc">Transfiere desde tu banco</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- Botón de Confirmación -->
+      <section class="checkout-actions">
+        <button class="btn-confirm" 
+                (click)="processCheckout()"
+                [disabled]="!isFormValid() || checkoutProcessing || cartItems.length === 0 || !hasCompleteClientInfo()"
+                [class.loading]="checkoutProcessing">
+          <span *ngIf="!checkoutProcessing">
+            <span class="btn-icon">🛒</span>
+            Confirmar Compra - {{ formatPrice(totalAmount) }}
+          </span>
+          <span *ngIf="checkoutProcessing">
+            <span class="btn-spinner"></span>
+            Procesando...
+          </span>
+        </button>
+        
+        <p *ngIf="!hasCompleteClientInfo()" class="error-note">
+          ⚠️ Completa tu información de perfil para poder realizar la compra
+        </p>
+        
+        <p class="security-note">
+          🔒 Tu información está protegida. No almacenamos datos de pago sensibles.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <!-- Factura Temporal -->
+  <div *ngIf="showInvoice && temporaryInvoice" class="invoice-container">
+    <div class="invoice-header">
+      <div class="success-icon">✅</div>
+      <h1>¡Compra Exitosa!</h1>
+      <p>Tu pedido ha sido procesado correctamente</p>
+    </div>
+
+    <div class="invoice-card">
+      <div class="invoice-header-info">
+        <div class="invoice-logo">
+          <h2>TechPads Store</h2>
+          <p>Factura de Venta</p>
+        </div>
+        <div class="invoice-meta">
+          <p><strong>Orden #:</strong> {{ temporaryInvoice.ordID }}</p>
+          <p><strong>Factura #:</strong> {{ temporaryInvoice.billCode }}</p>
+          <p><strong>Fecha:</strong> {{ temporaryInvoice.ordDate | date:'medium' }}</p>
+        </div>
+      </div>
+
+      <div class="invoice-body">
+        <div class="invoice-section">
+          <h3>Resumen del Pedido</h3>
+          <div class="invoice-details">
+            <div class="detail-row">
+              <span>Estado:</span>
+              <span class="status-badge status-{{temporaryInvoice.ordState.toLowerCase()}}">
+                {{ getOrderStatusText(temporaryInvoice.ordState) }}
+              </span>
+            </div>
+            <div class="detail-row">
+              <span>Método de Pago:</span>
+              <span>{{ getPaymentMethodText(temporaryInvoice.paymentType) }}</span>
+            </div>
+            <div class="detail-row">
+              <span>Total:</span>
+              <span class="total-amount">{{ formatPrice(temporaryInvoice.totalBill) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="invoice-section">
+          <h3>Dirección de Envío</h3>
+          <div class="shipping-details">
+            <p><strong>{{ shippingInfo.fullName }}</strong></p>
+            <p>{{ getFormattedAddress() }}</p>
+            <p>📞 {{ shippingInfo.phone }}</p>
+            <p *ngIf="shippingInfo.notes" class="delivery-notes">
+              <strong>Instrucciones:</strong> {{ shippingInfo.notes }}
+            </p>
+          </div>
+        </div>
+
+        <div class="invoice-actions">
+          <button class="btn-primary" (click)="confirmPurchase()">
+             Ver ordenes
+          </button>
+          <button class="btn-outline" (click)="continueShopping()">
+             Seguir Comprando
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
