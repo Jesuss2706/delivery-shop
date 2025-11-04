@@ -93,7 +93,7 @@ public class UserController {
         return ResponseEntity.created(location).body(createdUser);
     }
 
-    @PostMapping("/cli")
+    @PostMapping
     public ResponseEntity<?> createClient(@Valid @RequestBody Client client, BindingResult result) {
         if (result.hasErrors()) {
             Map<String, String> errors = result.getFieldErrors().stream()
