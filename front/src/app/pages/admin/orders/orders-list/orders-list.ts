@@ -210,15 +210,13 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
   }
 
   formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
+  const date = new Date(dateString);
+  return date.toLocaleDateString('es-CO', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
 
   getOrderStatusText(status: string): string {
     const statuses: { [key: string]: string } = {
