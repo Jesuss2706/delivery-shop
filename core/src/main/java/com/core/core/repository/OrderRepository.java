@@ -11,26 +11,26 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     
-    // Buscar órdenes de un usuario ordenadas por fecha descendente
+    // Métodos que faltan
+    List<Order> findByUserId(Long userId);
+    List<Order> findByUser_Username(String username);
+    
+    // Métodos existentes que mantienes
     @Query("SELECT o FROM Order o WHERE o.user.id = :userID ORDER BY o.ordDate DESC")
     List<Order> findByUserIdOrderByOrdDateDesc(@Param("userID") Long userID);
     
-    // Buscar órdenes por usuario y estado
     @Query("SELECT o FROM Order o WHERE o.user.id = :userID AND o.ordState = :state ORDER BY o.ordDate DESC")
     List<Order> findByUserIdAndState(@Param("userID") Long userID, @Param("state") String state);
     
-    // Buscar orden por ID con todos sus detalles
     @Query("SELECT o FROM Order o " +
            "LEFT JOIN FETCH o.orderDetails od " +
            "LEFT JOIN FETCH od.product " +
            "WHERE o.ordID = :ordID")
     Optional<Order> findByIdWithDetails(@Param("ordID") Long ordID);
     
-    // Contar órdenes por estado
     @Query("SELECT COUNT(o) FROM Order o WHERE o.ordState = :state")
     Long countByState(@Param("state") String state);
     
-    // Buscar órdenes pendientes de un usuario
     @Query("SELECT o FROM Order o WHERE o.user.id = :userID AND o.ordState IN ('Pending', 'Processing')")
     List<Order> findPendingOrdersByUser(@Param("userID") Long userID);
     
