@@ -204,7 +204,7 @@ export class AuthService {
 
     console.log('Enviando datos al backend:', clientData);
 
-    return this.http.post<User>(this.USERS_ENDPOINT, clientData).pipe(
+    return this.http.post<User>(`${this.USERS_ENDPOINT}/cli`, clientData).pipe(
       tap((user) => {
         console.log('Usuario registrado exitosamente:', user);
         this.setUser(user);
