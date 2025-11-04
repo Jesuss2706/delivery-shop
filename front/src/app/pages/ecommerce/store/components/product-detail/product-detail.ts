@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { InventoryService, InventoryItem } from '../../../../../services/inventory.service';
 import { CartService, CartItemDTO } from '../../../../../services/cart.service';
+import { AuthService } from '../../../../../services/auth.service';
 
 @Component({
   selector: 'app-product-detail',
@@ -20,7 +21,7 @@ export class ProductDetailComponent implements OnInit {
   selectedImage: string = '';
   addingToCart: boolean = false;
   
-  // Sistema de Toast local (igual que en CartComponent)
+  // Sistema de Toast local
   toast = {
     show: false,
     message: '',
@@ -31,7 +32,8 @@ export class ProductDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private inventoryService: InventoryService,
-    private cartService: CartService
+    private cartService: CartService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -77,64 +79,154 @@ export class ProductDetailComponent implements OnInit {
   increaseQuantity(): void {
     if (this.product && this.product.invStock && this.quantity < this.product.invStock) {
       this.quantity++;
+    } else {
+      this.showToast(`Stock máximo: ${this.product?.invStock || 0} unidades`, 'warning');
     }
   }
 
   decreaseQuantity(): void {
-    if (this.product && this.product.invStock && this.quantity > 1) {
+    if (this.quantity > 1) {
       this.quantity--;
     }
   }
 
   addToCart(): void {
-    if (this.product && this.product.product?.proCode) {
-      this.addingToCart = true;
-
-      const currentUserId = this.getCurrentUserId();
-      
-      if (!currentUserId) {
-        console.error('❌ No se pudo obtener el ID del usuario');
-        this.showToast('Error: Usuario no identificado', 'error');
-        this.addingToCart = false;
-        return;
-      }
-
-      const cartItem: CartItemDTO = {
-        userID: currentUserId,
-        proCode: this.product.product.proCode,
-        quantity: this.quantity
-      };
-
-      console.log('🛒 Agregando al carrito:', cartItem);
-
-      this.cartService.addToCart(cartItem).subscribe({
-        next: (response) => {
-          console.log('✅ Producto agregado al carrito:', response);
-          this.showToast(`¡${this.quantity} ${this.quantity === 1 ? 'unidad' : 'unidades'} de ${this.publicProductData.nombre} agregada(s) al carrito!`, 'success');
-          this.addingToCart = false;
-        },
-        error: (error) => {
-          console.error('❌ Error al agregar producto al carrito:', error);
-          this.showToast('Error al agregar producto al carrito', 'error');
-          this.addingToCart = false;
-        }
-      });
-    } else {
-      console.error('❌ No se puede agregar al carrito: producto no válido');
+    if (!this.product || !this.product.product?.proCode) {
+      console.error('❌ Producto no válido');
       this.showToast('Error: producto no válido', 'error');
+      return;
     }
+
+    // Verificar autenticación
+    if (!this.authService.isLoggedIn()) {
+      this.showToast('Debes iniciar sesión para agregar productos al carrito', 'error');
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const currentUserId = this.authService.getUserId();
+    
+    if (!currentUserId) {
+      console.error('❌ No se pudo obtener el ID del usuario');
+      this.showToast('Error: Usuario no identificado', 'error');
+      return;
+    }
+
+    // VALIDAR STOCK DISPONIBLE
+    const stockDisponible = this.product.invStock || 0;
+    
+    if (stockDisponible <= 0) {
+      this.showToast('Producto sin stock disponible', 'warning');
+      return;
+    }
+
+    if (this.quantity > stockDisponible) {
+      this.showToast(`Solo hay ${stockDisponible} unidades disponibles`, 'warning');
+      this.quantity = stockDisponible; // Ajustar cantidad al máximo disponible
+      return;
+    }
+
+    this.addingToCart = true;
+
+    const cartItem: CartItemDTO = {
+      userID: currentUserId,
+      proCode: this.product.product.proCode,
+      quantity: this.quantity
+    };
+
+    console.log('🛒 Agregando al carrito:', cartItem);
+
+    this.cartService.addToCart(cartItem).subscribe({
+      next: (response) => {
+        console.log('✅ Producto agregado al carrito:', response);
+        this.showToast(
+          `¡${this.quantity} ${this.quantity === 1 ? 'unidad' : 'unidades'} de ${this.publicProductData.nombre} agregada(s) al carrito!`, 
+          'success'
+        );
+        this.addingToCart = false;
+      },
+      error: (error) => {
+        console.error('❌ Error al agregar producto al carrito:', error);
+        
+        // Manejar diferentes tipos de errores
+        if (error.status === 400 && error.error?.message?.includes('stock')) {
+          this.showToast('No hay suficiente stock disponible', 'warning');
+        } else {
+          this.showToast('Error al agregar producto al carrito', 'error');
+        }
+        
+        this.addingToCart = false;
+      }
+    });
   }
 
   buyNow(): void {
-    if (this.product) {
-      console.log('Comprar ahora:', {
-        product: this.publicProductData,
-        quantity: this.quantity
-      });
-      // Primero agregar al carrito y luego redirigir al checkout
-      this.addToCart();
-      // this.router.navigate(['/checkout']);
+    if (!this.product) {
+      return;
     }
+
+    // Verificar autenticación
+    if (!this.authService.isLoggedIn()) {
+      this.showToast('Debes iniciar sesión para comprar', 'error');
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const currentUserId = this.authService.getUserId();
+    
+    if (!currentUserId) {
+      this.showToast('Error: Usuario no identificado', 'error');
+      return;
+    }
+
+    // VALIDAR STOCK DISPONIBLE
+    const stockDisponible = this.product.invStock || 0;
+    
+    if (stockDisponible <= 0) {
+      this.showToast('Producto sin stock disponible', 'warning');
+      return;
+    }
+
+    if (this.quantity > stockDisponible) {
+      this.showToast(`Solo hay ${stockDisponible} unidades disponibles`, 'warning');
+      this.quantity = stockDisponible;
+      return;
+    }
+
+    this.addingToCart = true;
+
+    const cartItem: CartItemDTO = {
+      userID: currentUserId,
+      proCode: this.product.product.proCode,
+      quantity: this.quantity
+    };
+
+    console.log('🛒 Comprar ahora - Agregando al carrito:', cartItem);
+
+    // Agregar al carrito y luego redirigir
+    this.cartService.addToCart(cartItem).subscribe({
+      next: (response) => {
+        console.log('✅ Producto agregado, redirigiendo al carrito...');
+        this.showToast('Producto agregado, redirigiendo al carrito...', 'success');
+        this.addingToCart = false;
+        
+        // Redirigir al carrito después de un breve delay para que el usuario vea el toast
+        setTimeout(() => {
+          this.router.navigate(['/store/cart']);
+        }, 800);
+      },
+      error: (error) => {
+        console.error('❌ Error al agregar producto:', error);
+        
+        if (error.status === 400 && error.error?.message?.includes('stock')) {
+          this.showToast('No hay suficiente stock disponible', 'warning');
+        } else {
+          this.showToast('Error al procesar la compra', 'error');
+        }
+        
+        this.addingToCart = false;
+      }
+    });
   }
 
   goBack(): void {
@@ -145,33 +237,7 @@ export class ProductDetailComponent implements OnInit {
     this.selectedImage = imageUrl;
   }
 
-  // Método para obtener el ID del usuario actual desde localStorage
-  private getCurrentUserId(): number | null {
-    try {
-      const userData = localStorage.getItem('user_data');
-      
-      if (userData) {
-        const user = JSON.parse(userData);
-        console.log('👤 Usuario obtenido de localStorage:', user);
-        
-        // El ID está en la propiedad 'id' del objeto principal
-        if (user && user.id) {
-          return user.id;
-        } else {
-          console.error('❌ No se encontró la propiedad "id" en user_data:', user);
-          return null;
-        }
-      } else {
-        console.warn('⚠️ No se encontró user_data en localStorage');
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Error al obtener user_data del localStorage:', error);
-      return null;
-    }
-  }
-
-  // Métodos para Toast (igual que en CartComponent)
+  // Métodos para Toast
   showToast(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
     this.toast = {
       show: true,

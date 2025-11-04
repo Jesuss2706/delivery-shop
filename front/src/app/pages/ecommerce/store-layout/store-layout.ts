@@ -32,6 +32,22 @@ export class StoreLayoutComponent implements OnInit {
     this.checkUserRole();
     this.loadCartCount();
   }
+
+  // AGREGAR ESTE MÉTODO
+  goToStore(): void {
+    this.router.navigate(['/store']).then((success) => {
+      if (success) {
+        console.log('📍 Navegando a la tienda principal');
+        this.menuOpen = false;
+        // Opcional: resetear filtros si es necesario
+        this.selectedTypeCode = null;
+        this.inventoryService.filterByTypeCode(null);
+      } else {
+        console.error('❌ Error navegando a la tienda');
+      }
+    });
+  }
+
   loadCartCount(): void {
     if (!this.authService.isLoggedIn()) {
       this.cartItemCount = 0;
@@ -46,12 +62,23 @@ export class StoreLayoutComponent implements OnInit {
       });
     }
   }
+
   goToCart(): void {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/auth/login']);
       return;
     }
     this.router.navigate(['/store/cart']);
+    this.menuOpen = false;
+  }
+
+  goToOrders(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+    this.router.navigate(['/store/order']);
+    this.menuOpen = false;
   }
 
   loadProductTypes(): void {
@@ -102,6 +129,7 @@ export class StoreLayoutComponent implements OnInit {
 
   goToAdmin(): void {
     this.router.navigate(['/admin/dashboard']);
+    this.menuOpen = false;
   }
 
   logout(): void {

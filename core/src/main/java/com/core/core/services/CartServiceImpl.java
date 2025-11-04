@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -142,10 +144,10 @@ public class CartServiceImpl implements CartService {
     @Override
     public BigDecimal calcularTotalCarritoProcedure(Long userId) {
         StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("PKG_CARRITO.CALCULAR_TOTAL_CARRITO")
-                .registerStoredProcedureParameter("p_user", Long.class, ParameterMode.IN)
+                .createStoredProcedureQuery("GESTION_CARRITO.calcular_total_carrito")
+                .registerStoredProcedureParameter("p_userID", Long.class, ParameterMode.IN)
                 .registerStoredProcedureParameter("p_total", BigDecimal.class, ParameterMode.OUT)
-                .setParameter("p_user", userId);
+                .setParameter("p_userID", userId);
 
         query.execute();
         
@@ -155,15 +157,51 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public boolean verificarDisponibilidadCarritoProcedure(Long userId) {
-        StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("PKG_CARRITO.VERIFICAR_DISPONIBILIDAD_CARRITO")
-                .registerStoredProcedureParameter("p_user", Long.class, ParameterMode.IN)
-                .registerStoredProcedureParameter("p_disponible", Integer.class, ParameterMode.OUT)
-                .setParameter("p_user", userId);
+        try {
+            StoredProcedureQuery query = entityManager
+                    .createStoredProcedureQuery("GESTION_CARRITO.verificar_disponibilidad_carrito")
+                    .registerStoredProcedureParameter("p_userID", Long.class, ParameterMode.IN)
+                    .registerStoredProcedureParameter("p_disponible", Boolean.class, ParameterMode.OUT)
+                    .setParameter("p_userID", userId);
 
-        query.execute();
-        
-        Integer disponible = (Integer) query.getOutputParameterValue("p_disponible");
-        return disponible != null && disponible == 1;
+            query.execute();
+            
+            Boolean disponible = (Boolean) query.getOutputParameterValue("p_disponible");
+            return Boolean.TRUE.equals(disponible);
+        } catch (Exception e) {
+            throw new RuntimeException("Error verificando disponibilidad del carrito: " + e.getMessage(), e);
+        }
+    }
+
+    
+    @Override
+    public Map<String, Object> verificarDisponibilidadCarritoCompleto(Long userId) {
+        try {
+            // Primero verificamos si el carrito tiene items
+            List<Cart> cartItems = cartRepository.findByUser_Id(userId);
+            if (cartItems.isEmpty()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("available", false);
+                result.put("message", "El carrito está vacío");
+                return result;
+            }
+
+            // Usamos el PL/SQL para verificar disponibilidad
+            boolean disponible = verificarDisponibilidadCarritoProcedure(userId);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("available", disponible);
+            result.put("message", disponible ? 
+                "Carrito disponible para checkout" : 
+                "Stock insuficiente para uno o más productos");
+            
+            return result;
+            
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("available", false);
+            error.put("message", "Error verificando disponibilidad: " + e.getMessage());
+            return error;
+        }
     }
 }

@@ -25,7 +25,7 @@ export class StoreComponent implements OnInit, OnDestroy {
   toast = {
     show: false,
     message: '',
-    type: 'success' as 'success' | 'error' // 'success' | 'error'
+    type: 'success' as 'success' | 'error' | 'warning'
   };
 
   constructor(
@@ -126,10 +126,16 @@ export class StoreComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // VALIDAR STOCK DISPONIBLE
+    if (!item.invStock || item.invStock <= 0) {
+      this.showToast('Producto sin stock disponible', 'warning');
+      return;
+    }
+
     // Mostrar loading para este producto específico
     this.loadingAddToCart[item.invCode!] = true;
 
-    // Crear el CartItemDTO
+    // Crear el CartItemDTO con cantidad 1
     const cartItemDTO: CartItemDTO = {
       userID: userId,
       proCode: item.product.proCode,
@@ -147,14 +153,21 @@ export class StoreComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('❌ Error agregando al carrito:', error);
-        this.showToast('Error al agregar el producto al carrito', 'error');
+        
+        // Manejar error de stock insuficiente
+        if (error.status === 400 && error.error?.message?.includes('stock')) {
+          this.showToast('No hay suficiente stock disponible', 'warning');
+        } else {
+          this.showToast('Error al agregar el producto al carrito', 'error');
+        }
+        
         this.loadingAddToCart[item.invCode!] = false;
       }
     });
   }
 
   // Método para mostrar toast
-  showToast(message: string, type: 'success' | 'error' = 'success'): void {
+  showToast(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
     this.toast = {
       show: true,
       message,
