@@ -1,6 +1,5 @@
 package com.core.core.controllers;
 
-import com.core.core.dto.CartItemDTO;
 import com.core.core.modules.Cart;
 import com.core.core.services.CartService;
 import jakarta.validation.Valid;
@@ -54,7 +53,7 @@ public class CartController {
     }
 
     @PostMapping
-    public ResponseEntity<?> addToCart(@Valid @RequestBody CartItemDTO cartItemDTO, 
+    public ResponseEntity<?> addToCart(@Valid @RequestBody Cart cartRequest,
                                        BindingResult result) {
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(
@@ -65,10 +64,23 @@ public class CartController {
         }
 
         try {
+            // Validar que el cartRequest tenga los datos necesarios
+            if (cartRequest.getUser() == null || cartRequest.getUser().getId() == null) {
+                return ResponseEntity.badRequest().body("El usuario es obligatorio");
+            }
+            if (cartRequest.getProCode() == null || cartRequest.getProCode().getProCode() == null) {
+                return ResponseEntity.badRequest().body("El producto es obligatorio");
+            }
+            if (cartRequest.getQuantity() == null || cartRequest.getQuantity() <= 0) {
+                return ResponseEntity.badRequest().body("La cantidad debe ser mayor a 0");
+            }
+
+
+
             Cart cart = cartService.addToCart(
-                    cartItemDTO.getUserID(), 
-                    cartItemDTO.getProCode(), 
-                    cartItemDTO.getQuantity()
+                    cartRequest.getUser().getId(),
+                    cartRequest.getProCode().getProCode(),
+                    cartRequest.getQuantity()
             );
             return ResponseEntity.status(HttpStatus.CREATED).body(cart);
         } catch (Exception e) {
@@ -157,7 +169,7 @@ public class CartController {
     // ============= ENDPOINTS CON PL/SQL =============
 
     @PostMapping("/plsql")
-    public ResponseEntity<?> addToCartPLSQL(@Valid @RequestBody CartItemDTO cartItemDTO, 
+    public ResponseEntity<?> addToCartPLSQL(@Valid @RequestBody Cart cartRequest,
                                             BindingResult result) {
         if (result.hasErrors()) {
             return ResponseEntity.badRequest().body(
@@ -168,10 +180,20 @@ public class CartController {
         }
 
         try {
+            if (cartRequest.getUser() == null || cartRequest.getUser().getId() == null) {
+                return ResponseEntity.badRequest().body("El usuario es obligatorio");
+            }
+            if (cartRequest.getProCode() == null || cartRequest.getProCode().getProCode() == null) {
+                return ResponseEntity.badRequest().body("El producto es obligatorio");
+            }
+            if (cartRequest.getQuantity() == null || cartRequest.getQuantity() <= 0) {
+                return ResponseEntity.badRequest().body("La cantidad debe ser mayor a 0");
+            }
+
             cartService.agregarAlCarritoProcedure(
-                    cartItemDTO.getUserID(), 
-                    cartItemDTO.getProCode(), 
-                    cartItemDTO.getQuantity()
+                    cartRequest.getUser().getId(),
+                    cartRequest.getProCode().getProCode(),
+                    cartRequest.getQuantity()
             );
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body("Producto agregado al carrito exitosamente (PL/SQL)");
@@ -180,6 +202,7 @@ public class CartController {
                     .body("Error al agregar al carrito (PL/SQL): " + e.getMessage());
         }
     }
+
 
     @PutMapping("/plsql/{cartID}")
     public ResponseEntity<?> updateCartQuantityPLSQL(@PathVariable Long cartID, 
