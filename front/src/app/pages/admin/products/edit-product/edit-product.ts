@@ -50,7 +50,7 @@ export class EditProductComponent implements OnInit {
           Validators.required,
           Validators.minLength(5),
           Validators.maxLength(50),
-          Validators.pattern(/^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ]+$/),
+          Validators.pattern(/^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ.,()]+$/)
         ],
       ],
       proMark: [
