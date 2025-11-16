@@ -13,6 +13,9 @@ public interface ProductService {
     Product updateProduct(Long code, Product product);
     boolean deleteProduct(Long code);
 
+    //query
+    List<Product> buscarProductosPorNombre(String prefix);
+
     //Funciones utilizando el paquete PL/SQL
     void crearProductoProcedure(Product product);
     void modificarProductoProcedure(Long code, Product product);

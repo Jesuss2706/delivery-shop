@@ -70,6 +70,12 @@ public class ProductServiceImpl implements ProductService {
         return false;
     }
 
+    //query
+    @Override
+    public List<Product> buscarProductosPorNombre(String prefix){
+        return productRepository.searchByName(prefix);
+    }
+
     // Metodos utilizando PL/SQL
     @Override
     public void crearProductoProcedure(Product product) {
