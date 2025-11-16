@@ -98,6 +98,16 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    //QUERY
+    @GetMapping("/search")
+    public ResponseEntity<List<Product>> searchByName(@RequestParam String prefix) {
+        List<Product> products = productService.buscarProductosPorNombre(prefix);
+        if(products.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(products);
+    }
+
     //SECCION CON PL/SQL
 
     @PostMapping("/plsql")
