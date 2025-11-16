@@ -1,0 +1,381 @@
+<div class="loading-container" *ngIf="loading">
+  <div class="spinner"></div>
+  <p>Cargando movimientos...</p>
+</div>
+
+<div class="list-container" *ngIf="!loading">
+  <div class="header-section">
+    <button type="button" class="back-button" (click)="goBack()">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Volver
+    </button>
+
+    <div class="header-content">
+      <h1>Movimientos de Inventario</h1>
+      <p class="subtitle">Historial de entradas, salidas, devoluciones y ajustes de stock</p>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-filter" (click)="toggleFilters()">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        {{ showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros' }}
+      </button>
+      <button class="btn-refresh" (click)="refresh()">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        Refrescar
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel de Filtros -->
+  <div class="filters-panel" *ngIf="showFilters">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label for="inventoryFilter">Código de Inventario</label>
+        <input
+          type="number"
+          id="inventoryFilter"
+          [(ngModel)]="selectedInventory"
+          placeholder="Ej: 1001"
+          class="filter-input"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label for="typeFilter">Tipo de Movimiento</label>
+        <select
+          id="typeFilter"
+          [(ngModel)]="selectedType"
+          class="filter-select"
+        >
+          <option [value]="null">Todos los tipos</option>
+          <option *ngFor="let type of movementTypes" [value]="type.value">
+            {{ type.label }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="startDate">Fecha Inicio</label>
+        <input
+          type="date"
+          id="startDate"
+          [(ngModel)]="selectedStartDate"
+          class="filter-input"
+        >
+      </div>
+
+      <div class="filter-group">
+        <label for="endDate">Fecha Fin</label>
+        <input
+          type="date"
+          id="endDate"
+          [(ngModel)]="selectedEndDate"
+          class="filter-input"
+        >
+      </div>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn-apply" (click)="applyFilters()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Aplicar Filtros (Local)
+      </button>
+      <button class="btn-apply-backend" (click)="applyFiltersWithBackend()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        </svg>
+        Aplicar (Backend)
+      </button>
+      <button class="btn-clear" (click)="clearFilters()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Limpiar
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions" *ngIf="!showFilters">
+    <button class="btn-quick" (click)="showRecentMovements()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      Últimos 7 días
+    </button>
+    <button class="btn-quick" (click)="selectedType = 'ENTRADA'; applyFilters()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="19" x2="12" y2="5"></line>
+        <polyline points="5 12 12 5 19 12"></polyline>
+      </svg>
+      Solo Entradas
+    </button>
+    <button class="btn-quick" (click)="selectedType = 'SALIDA'; applyFilters()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <polyline points="19 12 12 19 5 12"></polyline>
+      </svg>
+      Solo Salidas
+    </button>
+    <button class="btn-quick" (click)="selectedType = 'DEVOLUCION'; applyFilters()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+      </svg>
+      Solo Devoluciones
+    </button>
+  </div>
+
+  <!-- Resumen -->
+  <div class="summary-section" *ngIf="filteredMovements.length > 0">
+    <div class="summary-card">
+      <div class="summary-item">
+        <span class="summary-label">Total Movimientos</span>
+        <span class="summary-value">{{ totalMovements }}</span>
+      </div>
+      <div class="summary-item entrada">
+        <span class="summary-label">Entradas</span>
+        <span class="summary-value">
+          {{ entradaCount }} <small>({{ totalEntradas }} unidades)</small>
+        </span>
+      </div>
+      <div class="summary-item salida">
+        <span class="summary-label">Salidas</span>
+        <span class="summary-value">
+          {{ salidaCount }} <small>({{ totalSalidas }} unidades)</small>
+        </span>
+      </div>
+      <div class="summary-item devolucion">
+        <span class="summary-label">Devoluciones</span>
+        <span class="summary-value">{{ devolucionCount }}</span>
+      </div>
+      <div class="summary-item ajuste">
+        <span class="summary-label">Ajustes</span>
+        <span class="summary-value">{{ ajusteCount }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado vacío -->
+  <div class="empty-state" *ngIf="filteredMovements.length === 0">
+    <svg
+      width="80"
+      height="80"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+    <h3>No hay movimientos registrados</h3>
+    <p>No se han encontrado movimientos con los criterios actuales</p>
+    <button class="btn-primary" (click)="clearFilters()">Ver todos los movimientos</button>
+  </div>
+
+  <!-- Grid de movimientos -->
+  <div class="movements-grid" *ngIf="filteredMovements.length > 0">
+    <div class="movement-card" *ngFor="let movement of filteredMovements">
+      <!-- Header de la tarjeta -->
+      <div class="movement-header">
+        <div class="movement-type">
+          <span class="type-badge" [ngClass]="getMovementTypeClass(movement.movType)">
+            {{ getMovementTypeText(movement.movType) }}
+          </span>
+        </div>
+        <div class="movement-id">
+          <span class="id-label">#{{ movement.invMovID }}</span>
+        </div>
+      </div>
+
+      <!-- Imagen del producto -->
+      <div class="product-image-container">
+        <img 
+          [src]="getProductImage(movement)" 
+          [alt]="movement.proName"
+          class="product-image"
+          (error)="$event.target.src='assets/images/no-image.png'"
+        >
+      </div>
+
+      <!-- Contenido principal -->
+      <div class="movement-content">
+        <div class="product-info">
+          <h3 class="product-name">{{ movement.proName }}</h3>
+          <p class="provider-name">{{ movement.provName }}</p>
+          <p class="inventory-code">Inventario #{{ movement.invCode }}</p>
+        </div>
+
+        <!-- Detalles principales -->
+        <div class="movement-details">
+          <div class="detail-row">
+            <div class="detail-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Cantidad</span>
+                <span class="detail-value quantity" [ngClass]="getQuantityClass(movement.movType)">
+                  {{ formatQuantity(movement.quantity, movement.movType) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="detail-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Stock Actual</span>
+                <span class="detail-value">{{ movement.invStock }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stock anterior y nuevo -->
+          <div class="stock-change" *ngIf="movement.prevStock !== null && movement.newStock !== null">
+            <div class="stock-item">
+              <span class="stock-label">Stock Anterior:</span>
+              <span class="stock-value">{{ movement.prevStock }}</span>
+            </div>
+            <span class="stock-arrow">→</span>
+            <div class="stock-item">
+              <span class="stock-label">Stock Nuevo:</span>
+              <span class="stock-value">{{ movement.newStock }}</span>
+            </div>
+          </div>
+
+          <!-- Precio -->
+          <div class="detail-row">
+            <div class="detail-item full-width">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Precio de Venta</span>
+                <span class="detail-value price">{{ formatPrice(movement.sellingPrice) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fecha -->
+          <div class="detail-row">
+            <div class="detail-item full-width">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Fecha del Movimiento</span>
+                <span class="detail-value">{{ formatDate(movement.movDate) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Orden relacionada -->
+          <div class="detail-row" *ngIf="movement.ordId">
+            <div class="detail-item full-width">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Orden Relacionada</span>
+                <span class="detail-value order-id">#{{ movement.ordId }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Usuario (si existe) -->
+          <div class="detail-row" *ngIf="movement.userName">
+            <div class="detail-item full-width">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <div class="detail-content">
+                <span class="detail-label">Registrado por</span>
+                <span class="detail-value">{{ movement.userName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Razón (devoluciones/ajustes) -->
+          <div class="reason-section" *ngIf="hasReason(movement)">
+            <div class="reason-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span class="reason-label">Razón:</span>
+            </div>
+            <p class="reason-text">{{ movement.reason }}</p>
+          </div>
+        </div>
+      </div>
+
+     
+      
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div *ngIf="showToast" class="toast" [ngClass]="'toast-' + toastType">
+  <div class="toast-content">
+    <svg *ngIf="toastType === 'success'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <svg *ngIf="toastType === 'error'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+    </svg>
+    <p>{{ toastMessage }}</p>
+  </div>
+</div>

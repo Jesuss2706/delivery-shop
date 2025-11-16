@@ -77,6 +77,13 @@ export const routes: Routes = [
             (m) => m.RegisterInventoryComponent
           ),
       },
+      { 
+        path: 'inventory/movements',
+        loadComponent: () =>
+          import('./pages/admin/inventory/inv-movement/inv-movement').then(
+            (m) => m.InvMovementComponent
+          ),
+      },
       {
         path: 'orders/list',
         loadComponent: () =>
