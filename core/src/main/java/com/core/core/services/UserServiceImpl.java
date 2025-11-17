@@ -165,4 +165,34 @@ public class UserServiceImpl implements UserService {
         return createdUser;
     }
 
+    // Actualizar usuario mediante PL/SQL
+    @Override
+    public User updateClient(Long userId, User user, ClientDetail clientDetail) {
+
+        String encryptedPassword = null;
+
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            encryptedPassword = passwordEncoder.encode(user.getPassword());
+        }
+
+        userRepository.modificarUsuario(
+                userId,
+                user.getPhone(),
+                user.getEmail(),
+                encryptedPassword,
+                clientDetail.getFirstName(),
+                clientDetail.getSecondName(),
+                clientDetail.getFirstLastName(),
+                clientDetail.getSecondLastName(),
+                clientDetail.getAddress(),
+                clientDetail.getDescAddress(),
+                clientDetail.getCity().getCityID(),
+                clientDetail.getDepartment().getDepID()
+        );
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado después de actualizar"));
+    }
+
+
 }
