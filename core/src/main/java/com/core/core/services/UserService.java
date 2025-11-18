@@ -19,5 +19,6 @@ public interface UserService {
 
     //PL/SQL
     User createClient(User user, ClientDetail clientDetail);
+    User updateClient(Long userId, User user, ClientDetail clientDetail);
 }
 

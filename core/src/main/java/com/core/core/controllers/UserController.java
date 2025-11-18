@@ -151,6 +151,25 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
+    @PutMapping("/cli/{id}")
+    public ResponseEntity<?> updateClient (@PathVariable Long id, @RequestBody Client client) {
+        try {
+
+
+            User user = client.getUser();
+
+            ClientDetail clientDetail = client.getClientDetail();
+
+            User updated = userService.updateClient(id, user, clientDetail);
+
+            return ResponseEntity.ok(updated);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         boolean deleted = userService.deleteUser(id);
