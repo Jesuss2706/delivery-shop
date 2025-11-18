@@ -310,28 +310,30 @@ export class AuthService {
   // ============================================================
 
   getUserData(username: string): Observable<User> {
-  console.log('🔍 Obteniendo datos del usuario:', username);
-  console.log('🔗 URL:', `${this.USERS_ENDPOINT}/username/${username}`);
-  
-  return this.http.get<User>(`${this.USERS_ENDPOINT}/username/${username}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
-  }).pipe(
-    tap((user) => {
-      console.log('✅ Datos completos del usuario obtenidos:', user);
-      this.setUser(user);
-    }),
-    catchError((error) => {
-      console.error('❌ Error obteniendo datos del usuario:', error);
-      console.error('❌ Error status:', error.status);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error details:', error.error);
-      return throwError(() => error);
-    })
-  );
-}
+    console.log('🔍 Obteniendo datos del usuario:', username);
+    console.log('🔗 URL:', `${this.USERS_ENDPOINT}/username/${username}`);
+
+    return this.http
+      .get<User>(`${this.USERS_ENDPOINT}/username/${username}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      })
+      .pipe(
+        tap((user) => {
+          console.log('✅ Datos completos del usuario obtenidos:', user);
+          this.setUser(user);
+        }),
+        catchError((error) => {
+          console.error('❌ Error obteniendo datos del usuario:', error);
+          console.error('❌ Error status:', error.status);
+          console.error('❌ Error message:', error.message);
+          console.error('❌ Error details:', error.error);
+          return throwError(() => error);
+        })
+      );
+  }
 
   refreshUserData(): Observable<User> {
     const username = this.getUsernameFromToken();
@@ -369,6 +371,30 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return this.hasValidToken();
+  }
+  // En AuthService - Agrega estos métodos:
+
+  /**
+   * Actualiza el usuario en el servicio y localStorage
+   */
+  updateUserData(updatedUser: User): void {
+    console.log('🔄 Actualizando datos del usuario en AuthService:', updatedUser);
+    this.setUser(updatedUser);
+  }
+
+  /**
+   * Obtiene un observable del usuario actual
+   */
+  getCurrentUserObservable(): Observable<User | null> {
+    return this.currentUserSubject.asObservable();
+  }
+
+  /**
+   * Notifica a los suscriptores que los datos del usuario han cambiado
+   */
+  notifyUserDataChanged(): void {
+    const currentUser = this.getCurrentUser();
+    this.currentUserSubject.next(currentUser);
   }
 
   // ============================================================

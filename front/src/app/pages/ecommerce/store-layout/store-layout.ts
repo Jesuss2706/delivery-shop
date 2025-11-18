@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { InventoryService, ProductType } from '../../../services/inventory.service';
 import { AuthService } from '../../../services/auth.service';
 import { CartService } from '../../../services/cart.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-store-layout',
@@ -12,13 +13,16 @@ import { CartService } from '../../../services/cart.service';
   templateUrl: './store-layout.html',
   styleUrls: ['./store-layout.css'],
 })
-export class StoreLayoutComponent implements OnInit {
+export class StoreLayoutComponent implements OnInit, OnDestroy {
   menuOpen: boolean = false;
   categoriaExpandida: boolean = false;
   productTypes: ProductType[] = [];
   selectedTypeCode: number | null = null;
   isAdmin: boolean = false;
   cartItemCount: number = 0;
+  
+  // AGREGAR: Suscripción para cambios de usuario
+  private userSubscription: Subscription | null = null;
 
   constructor(
     public router: Router,
@@ -31,15 +35,38 @@ export class StoreLayoutComponent implements OnInit {
     this.loadProductTypes();
     this.checkUserRole();
     this.loadCartCount();
+    
+    // AGREGAR: Suscribirse a cambios del usuario
+    this.subscribeToUserChanges();
   }
 
-  // AGREGAR ESTE MÉTODO
+  // AGREGAR: Suscribirse a cambios del usuario
+  private subscribeToUserChanges(): void {
+    this.userSubscription = this.authService.getCurrentUserObservable().subscribe({
+      next: (user) => {
+        console.log('🔄 StoreLayout - Datos de usuario actualizados:', user);
+        // Actualizar el estado del componente cuando cambie el usuario
+        this.checkUserRole();
+        this.loadCartCount();
+      },
+      error: (err) => {
+        console.error('❌ Error en suscripción a usuario:', err);
+      }
+    });
+  }
+
+  // AGREGAR: Limpiar suscripción al destruir el componente
+  ngOnDestroy(): void {
+    if (this.userSubscription) {
+      this.userSubscription.unsubscribe();
+    }
+  }
+
   goToStore(): void {
     this.router.navigate(['/store']).then((success) => {
       if (success) {
         console.log('📍 Navegando a la tienda principal');
         this.menuOpen = false;
-        // Opcional: resetear filtros si es necesario
         this.selectedTypeCode = null;
         this.inventoryService.filterByTypeCode(null);
       } else {
@@ -57,7 +84,10 @@ export class StoreLayoutComponent implements OnInit {
     const userID = this.authService.getUserId();
     if (userID) {
       this.cartService.getCartItemCount(userID).subscribe({
-        next: (count: any) => (this.cartItemCount = count),
+        next: (count: any) => {
+          this.cartItemCount = count;
+          console.log('🛒 Contador del carrito actualizado:', count);
+        },
         error: (err: any) => console.error('Error cargando contador:', err),
       });
     }
@@ -90,9 +120,11 @@ export class StoreLayoutComponent implements OnInit {
 
   checkUserRole(): void {
     this.isAdmin = this.authService.isAdmin();
-    console.log(' Usuario autenticado:', this.authService.isLoggedIn());
-    console.log(' Es admin:', this.isAdmin);
-    console.log(' Rol:', this.authService.getUserRole());
+    console.log('🔐 StoreLayout - Estado de autenticación:');
+    console.log('   Usuario autenticado:', this.authService.isLoggedIn());
+    console.log('   Es admin:', this.isAdmin);
+    console.log('   Rol:', this.authService.getUserRole());
+    console.log('   Usuario actual:', this.authService.getCurrentUser());
   }
 
   toggleMenu(): void {
@@ -132,9 +164,20 @@ export class StoreLayoutComponent implements OnInit {
     this.menuOpen = false;
   }
 
+  goToAboutUs(): void {
+    this.router.navigate(['/store/about-us']);
+    this.menuOpen = false;
+  }
+
+  goToProfile(): void {
+    this.router.navigate(['/store/profile']);
+    this.menuOpen = false;
+  }
+
   logout(): void {
     this.authService.logout();
     this.isAdmin = false;
+    this.cartItemCount = 0; 
     this.router.navigate(['/']);
   }
 }

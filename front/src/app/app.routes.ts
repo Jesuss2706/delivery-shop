@@ -11,6 +11,8 @@ import { AuthGuard } from './guards/auth.guard';
 import { CartComponent } from './pages/ecommerce/cart/cart';
 import { CheckoutComponent } from './pages/ecommerce/checkout/checkout';
 import { OrderComponent } from './pages/ecommerce/order/order';
+import { AboutUsComponent } from './pages/ecommerce/about-us/about-us';
+import { UserUpdate } from './pages/ecommerce/user-update/user-update';
 
 export const routes: Routes = [
   { path: '', component: Principal },
@@ -25,7 +27,9 @@ export const routes: Routes = [
       { path: 'cart', component: CartComponent },
       { path: 'checkout', component: CheckoutComponent },
       { path: 'order', component: OrderComponent },
-      { path: 'order/:orderId', component: OrderComponent }
+      { path: 'order/:orderId', component: OrderComponent },
+      { path: 'about-us', component: AboutUsComponent},
+      { path: 'profile', component: UserUpdate }
     ],
   },
   {
