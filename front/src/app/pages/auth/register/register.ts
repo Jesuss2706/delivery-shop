@@ -468,10 +468,13 @@ export class Register implements OnInit {
       error: (error: any) => {
         console.error('Error al registrar usuario:', error);
         this.isSubmitting = false;
-        this.showToastMessage(
-          error.error?.message || 'Error al registrar el usuario. Por favor, intenta nuevamente.',
-          'error'
-        );
+        // Try multiple error message locations
+        const errorMessage = 
+          error.error?.message || 
+          error.error?.error || 
+          error.message || 
+          'Error al registrar el usuario. Por favor, intenta nuevamente.';
+        this.showToastMessage(errorMessage, 'error');
       },
     });
   }

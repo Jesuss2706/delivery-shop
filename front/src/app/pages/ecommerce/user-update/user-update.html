@@ -40,14 +40,13 @@
           <span>Actualiza tu dirección de entrega</span>
         </li>
         <li>
-          <span class="icon">📱</span>
-          <span>Cambia tu número de contacto</span>
-        </li>
-        <li>
           <span class="icon">✅</span>
           <span>Mantén tus datos seguros</span>
         </li>
       </ul>
+
+      
+      
     </div>
 
     <!-- Columna Derecha -->
@@ -59,11 +58,10 @@
         {{ errorMessage }}
       </div>
 
-      <div *ngIf="successMessage" class="success-message">
-        {{ successMessage }}
-      </div>
+      
 
-      <form (ngSubmit)="onSubmit()" #updateForm="ngForm">
+      <!-- Formulario Principal -->
+      <form  (ngSubmit)="onSubmit()" #updateForm="ngForm">
         <div class="form-grid">
           <!-- Nombres y Apellidos -->
           <div class="input-label">
@@ -153,13 +151,10 @@
               name="username"
               required
               maxlength="16"
-              (blur)="validateField('username', userForm.username)"
+              disabled
               [class.error]="hasError('username')"
             />
-            <div *ngIf="hasError('username')" class="field-error">
-              {{ getError('username') }}
-            </div>
-            <small class="hint">4-16 caracteres, solo letras, números y _</small>
+            <small class="hint">El nombre de usuario no puede ser modificado</small>
           </div>
 
           <!-- Teléfono -->

@@ -215,7 +215,18 @@ export class CheckoutComponent implements OnInit {
       error: (err) => {
         console.error('Error procesando compra:', err);
         this.checkoutProcessing = false;
-        this.showToast('Error al procesar la compra: ' + err.message, 'error');
+        
+        // Proporcionar mensajes amigables basados en el tipo de error
+        let userMessage = err.message || 'Error al procesar la compra';
+        
+        // Si es error de serialización, sugerir reintentar
+        if (userMessage.includes('transacción') || userMessage.includes('serializar')) {
+          userMessage = 'La compra está siendo procesada. Espera un momento e intenta nuevamente.';
+        } else if (userMessage.includes('conexión') || userMessage.includes('conectar')) {
+          userMessage = 'Problema de conexión. Verifica tu internet e intenta nuevamente.';
+        }
+        
+        this.showToast('❌ ' + userMessage, 'error');
       }
     });
   }

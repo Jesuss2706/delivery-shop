@@ -348,7 +348,7 @@ export class RegisterInventoryComponent implements OnInit {
     });
 
     // Cargar inventario existente
-    this.inventoryService.getAllInventory().subscribe({
+    this.inventoryService.getAllInventoryPLSQL().subscribe({
       next: (inventory: InventoryItem[]) => {
         this.existingInventory = inventory;
         this.loadingInventory = false;

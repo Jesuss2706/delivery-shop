@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { Observable, throwError, of } from 'rxjs';
+import { catchError, map, retry, delay } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 // Interfaces basadas en los DTOs del backend
@@ -89,7 +89,17 @@ export class CheckoutService {
   processCheckout(checkoutRequest: CheckoutRequest): Observable<CheckoutResponse> {
     return this.http
       .post<CheckoutResponse>(`${this.apiUrl}/process`, checkoutRequest)
-      .pipe(catchError(this.handleError));
+      .pipe(
+        retry({ count: 3, delay: (error, retryCount) => {
+          // Solo reintentar en errores de serialización de transacciones (5xx) o timeout
+          if ((error.status >= 500 && error.status < 600) || error.status === 0) {
+            console.warn(`Reintentando checkout (intento ${retryCount + 1}/3)...`);
+            return of(null).pipe(delay(Math.pow(2, retryCount) * 500)); // Backoff exponencial
+          }
+          return throwError(() => error);
+        }}),
+        catchError(this.handleError)
+      );
   }
 
   /**
@@ -180,13 +190,25 @@ export class CheckoutService {
       if (error.error && error.error.error) {
         errorMessage = error.error.error;
       } else if (error.status === 0) {
-        errorMessage = 'No se pudo conectar con el servidor';
+        errorMessage = 'No se pudo conectar con el servidor. Por favor, verifica tu conexión.';
+      } else if (error.status === 400) {
+        // Verificar si es error de serialización de transacción
+        if (errorMessage.includes('Error de transacción concurrente')) {
+          errorMessage = 'La compra está siendo procesada. Por favor, intenta nuevamente en unos momentos.';
+        } else {
+          errorMessage = error.error?.message || 'Datos inválidos en la solicitud';
+        }
+      } else if (error.status === 408) {
+        errorMessage = 'La solicitud tardó demasiado tiempo. Por favor, intenta nuevamente.';
+      } else if (error.status >= 500) {
+        errorMessage = 'El servidor está experimentando problemas. Por favor, intenta nuevamente en unos momentos.';
       } else {
         errorMessage = `Error ${error.status}: ${error.message}`;
       }
     }
 
     console.error('Error en CheckoutService:', error);
+    console.error('Mensaje de error procesado:', errorMessage);
     return throwError(() => new Error(errorMessage));
   }
 }

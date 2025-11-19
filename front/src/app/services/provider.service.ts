@@ -17,6 +17,30 @@ export class ProviderService {
 
   constructor(private http: HttpClient) {}
 
+  // ============= MÉTODOS CON PL/SQL =============
+
+  getProvidersPLSQL(): Observable<Provider[]> {
+    return this.http.get<Provider[]>(`${this.apiUrl}/plsql`);
+  }
+
+  getProviderByIdPLSQL(id: number): Observable<Provider> {
+    return this.http.get<Provider>(`${this.apiUrl}/plsql/${id}`);
+  }
+
+  createProviderPLSQL(provider: Provider): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/plsql`, provider);
+  }
+
+  updateProviderPLSQL(id: number, provider: Provider): Observable<Provider> {
+    return this.http.put<Provider>(`${this.apiUrl}/plsql/${id}`, provider);
+  }
+
+  deleteProviderPLSQL(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/plsql/${id}`);
+  }
+
+  // ============= MÉTODOS JPA (FALLBACK) =============
+
   getProviders(): Observable<Provider[]> {
     return this.http.get<Provider[]>(this.apiUrl);
   }
@@ -28,7 +52,6 @@ export class ProviderService {
   createProvider(provider: Provider): Observable<void> {
     return this.http.post<void>(this.apiUrl, provider);
   }
-
 
   updateProvider(id: number, provider: Provider): Observable<Provider> {
     return this.http.put<Provider>(`${this.apiUrl}/${id}`, provider);

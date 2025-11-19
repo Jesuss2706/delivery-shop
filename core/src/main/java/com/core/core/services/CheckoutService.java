@@ -10,6 +10,7 @@ import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -17,8 +18,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
-@RequiredArgsConstructor
 @Slf4j
 public class CheckoutService {
 
@@ -30,16 +29,45 @@ public class CheckoutService {
     private final BillRepository billRepository;
     private final UserRepository userRepository;
 
+    // Configuración de reintentos
+    private static final int MAX_RETRIES = 3;
+    private static final long INITIAL_BACKOFF_MILLIS = 100;
+    private static final double BACKOFF_MULTIPLIER = 2.0;
+
+    public CheckoutService(EntityManager entityManager, OrderRepository orderRepository,
+                          OrderDetailRepository orderDetailRepository, BillRepository billRepository,
+                          UserRepository userRepository) {
+        this.entityManager = entityManager;
+        this.orderRepository = orderRepository;
+        this.orderDetailRepository = orderDetailRepository;
+        this.billRepository = billRepository;
+        this.userRepository = userRepository;
+    }
+
     /**
      * Procesar compra utilizando el procedimiento almacenado PL/SQL
+     * Con reintentos automáticos para errores de serialización de transacciones
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 30)
     public CheckoutResponse procesarCompra(CheckoutRequest request) {
+        return procesarCompraConReintentos(request, 0);
+    }
+
+    /**
+     * Método recursivo con lógica de reintentos para ORA-08177
+     */
+    private CheckoutResponse procesarCompraConReintentos(CheckoutRequest request, int intentoActual) {
         try {
-            log.info("Procesando compra para usuario: {}", request.getUserID());
+            log.info("Procesando compra para usuario: {} (intento {}/{})", 
+                    request.getUserID(), intentoActual + 1, MAX_RETRIES);
 
             // Verificar que el usuario existe
             User user = userRepository.findById(request.getUserID())
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            // Limpiar la sesión antes de ejecutar el procedimiento
+            entityManager.flush();
+            entityManager.clear();
 
             // Llamar al procedimiento almacenado
             StoredProcedureQuery query = entityManager
@@ -82,12 +110,43 @@ public class CheckoutService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Error al procesar la compra: {}", e.getMessage(), e);
+            String errorMsg = e.getMessage();
+            
+            // Verificar si es error de serialización de transacción (ORA-08177)
+            boolean esErrorSerializacion = errorMsg != null && 
+                    (errorMsg.contains("ORA-08177") || errorMsg.contains("no se puede serializar"));
+            
+            if (esErrorSerializacion && intentoActual < MAX_RETRIES) {
+                long backoffMs = (long) (INITIAL_BACKOFF_MILLIS * Math.pow(BACKOFF_MULTIPLIER, intentoActual));
+                log.warn("Error de serialización detectado. Reintentando en {}ms... (intento {}/{})", 
+                        backoffMs, intentoActual + 1, MAX_RETRIES);
+                
+                try {
+                    Thread.sleep(backoffMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Interrupción durante espera de reintento", ie);
+                }
+                
+                // Limpiar sesión antes del reintento
+                entityManager.clear();
+                
+                // Reintento recursivo
+                return procesarCompraConReintentos(request, intentoActual + 1);
+            }
+            
+            log.error("Error al procesar la compra (intento {}/{}): {}", 
+                    intentoActual + 1, MAX_RETRIES, e.getMessage(), e);
+            
+            // Mensaje de error más descriptivo
+            if (esErrorSerializacion) {
+                throw new RuntimeException("Error de transacción concurrente. Por favor, intenta nuevamente en unos momentos.");
+            }
             throw new RuntimeException("Error al procesar la compra: " + e.getMessage());
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public List<OrderSummaryDTO> getOrdersWithFilters(String state) {
         try {
             log.info("Obteniendo órdenes con filtros - estado: {}", state);
@@ -121,9 +180,13 @@ public class CheckoutService {
         }
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 10)
     public void updateOrderStatus(Long ordID, String newState) {
         try {
             log.info("Actualizando estado de orden {} a {}", ordID, newState);
+
+            // Limpiar sesión para evitar conflictos
+            entityManager.clear();
 
             Order order = orderRepository.findById(ordID)
                     .orElseThrow(() -> new RuntimeException("Orden no encontrada"));
@@ -174,7 +237,7 @@ public class CheckoutService {
         return true;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public List<OrderSummaryDTO> getAllOrders() {
         try {
             log.info("Obteniendo todas las órdenes del sistema");
@@ -208,7 +271,7 @@ public class CheckoutService {
     /**
      * Obtener historial de órdenes del usuario
      */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public List<OrderSummaryDTO> getOrderHistory(Long userID) {
         try {
             log.info("Obteniendo historial de órdenes para usuario: {}", userID);
@@ -242,7 +305,7 @@ public class CheckoutService {
     /**
      * Obtener detalle completo de una orden
      */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public OrderDetailDTO getOrderDetail(Long ordID) {
         try {
             log.info("Obteniendo detalle de orden: {}", ordID);
@@ -321,10 +384,20 @@ public class CheckoutService {
 
     /**
      * Cancelar una orden usando el procedimiento almacenado
+     * Con reintentos para errores de serialización
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 30)
     public void cancelarOrden(Long ordID, String reason) {
+        cancelarOrdenConReintentos(ordID, reason, 0);
+    }
+
+    private void cancelarOrdenConReintentos(Long ordID, String reason, int intentoActual) {
         try {
-            log.info("Cancelando orden: {} - Razón: {}", ordID, reason);
+            log.info("Cancelando orden: {} - Razón: {} (intento {}/{})", 
+                    ordID, reason, intentoActual + 1, MAX_RETRIES);
+
+            // Limpiar sesión antes de ejecutar
+            entityManager.clear();
 
             // Verificar que la orden existe
             Order order = orderRepository.findById(ordID)
@@ -350,17 +423,41 @@ public class CheckoutService {
             log.info("Orden {} cancelada exitosamente", ordID);
 
         } catch (Exception e) {
-            log.error("Error al cancelar orden: {}", e.getMessage(), e);
-            throw new RuntimeException("Error al cancelar orden: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            boolean esErrorSerializacion = errorMsg != null && 
+                    (errorMsg.contains("ORA-08177") || errorMsg.contains("no se puede serializar"));
+            
+            if (esErrorSerializacion && intentoActual < MAX_RETRIES) {
+                long backoffMs = (long) (INITIAL_BACKOFF_MILLIS * Math.pow(BACKOFF_MULTIPLIER, intentoActual));
+                log.warn("Error de serialización en cancelación. Reintentando en {}ms... (intento {}/{})", 
+                        backoffMs, intentoActual + 1, MAX_RETRIES);
+                
+                try {
+                    Thread.sleep(backoffMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Interrupción durante espera de reintento", ie);
+                }
+                
+                entityManager.clear();
+                cancelarOrdenConReintentos(ordID, reason, intentoActual + 1);
+            } else {
+                log.error("Error al cancelar orden (intento {}/{}): {}", 
+                        intentoActual + 1, MAX_RETRIES, e.getMessage(), e);
+                throw new RuntimeException("Error al cancelar orden: " + e.getMessage());
+            }
         }
     }
 
     /**
      * Cambiar estado de una orden (para administradores)
      */
+    @Transactional(isolation = Isolation.READ_COMMITTED, timeout = 10)
     public void cambiarEstadoOrden(Long ordID, String newState) {
         try {
             log.info("Cambiando estado de orden {} a {}", ordID, newState);
+
+            entityManager.clear();
 
             Order order = orderRepository.findById(ordID)
                     .orElseThrow(() -> new RuntimeException("Orden no encontrada"));
@@ -385,7 +482,7 @@ public class CheckoutService {
     /**
      * Obtener órdenes pendientes de un usuario
      */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     public List<OrderSummaryDTO> getPendingOrders(Long userID) {
         try {
             List<Order> orders = orderRepository.findPendingOrdersByUser(userID);

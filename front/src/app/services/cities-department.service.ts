@@ -45,7 +45,33 @@ export class CitiesDepartmentService {
     console.log('API URL:', environment.apiUrl);
   }
 
-  
+  // ========== Métodos de Departamentos con PL/SQL ==========
+
+  getDepartmentsPLSQL(): Observable<Department[]> {
+    console.log('Llamando a (PL/SQL):', `${this.DEPARTMENT_ENDPOINT}/plsql`);
+    return this.http.get<DepartmentAPI[]>(`${this.DEPARTMENT_ENDPOINT}/plsql`)
+      .pipe(
+        map(departments => departments.map(dept => ({
+          id: dept.depID,
+          name: dept.depName
+        }))),
+        catchError(this.handleError)
+      );
+  }
+
+  getDepartmentByIdPLSQL(id: number): Observable<Department> {
+    return this.http.get<DepartmentAPI>(`${this.DEPARTMENT_ENDPOINT}/plsql/${id}`)
+      .pipe(
+        map(dept => ({
+          id: dept.depID,
+          name: dept.depName
+        })),
+        catchError(this.handleError)
+      );
+  }
+
+  // ========== Métodos de Departamentos (JPA - FALLBACK) ==========
+
   getDepartments(): Observable<Department[]> {
     console.log('Llamando a:', this.DEPARTMENT_ENDPOINT);
     return this.http.get<DepartmentAPI[]>(this.DEPARTMENT_ENDPOINT)
@@ -70,7 +96,57 @@ export class CitiesDepartmentService {
   }
 
   // ========== Métodos de Ciudades ==========
-  
+  // ========== Métodos de Ciudades con PL/SQL ==========
+
+  /**
+   * Obtiene todas las ciudades usando PL/SQL
+   */
+  getCitiesPLSQL(): Observable<City[]> {
+    return this.http.get<CityAPI[]>(`${this.CITY_ENDPOINT}/plsql`)
+      .pipe(
+        map(cities => cities.map(city => ({
+          id: city.cityID,
+          name: city.cityName,
+          departmentId: city.depID
+        }))),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Obtiene una ciudad por su ID usando PL/SQL
+   */
+  getCityByIdPLSQL(id: number): Observable<City> {
+    return this.http.get<CityAPI>(`${this.CITY_ENDPOINT}/plsql/${id}`)
+      .pipe(
+        map(city => ({
+          id: city.cityID,
+          name: city.cityName,
+          departmentId: city.depID
+        })),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Obtiene todas las ciudades de un departamento específico usando PL/SQL
+   */
+  getCitiesByDepartmentPLSQL(departmentId: number): Observable<City[]> {
+    const url = `${this.CITY_ENDPOINT}/plsql/department/${departmentId}`;
+    console.log('Llamando a (PL/SQL):', url);
+    return this.http.get<CityAPI[]>(url)
+      .pipe(
+        map(cities => cities.map(city => ({
+          id: city.cityID,
+          name: city.cityName,
+          departmentId: city.depID
+        }))),
+        catchError(this.handleError)
+      );
+  }
+
+  // ========== Métodos de Ciudades (JPA - FALLBACK) ==========
+
   /**
    * Obtiene todas las ciudades
    */

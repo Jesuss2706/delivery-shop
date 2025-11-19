@@ -15,7 +15,7 @@ import java.util.Optional;
 @Repository
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
-        // Consultas JPA normales - ACTUALIZADAS para el campo 'user'
+        
         List<Cart> findByUser_Id(Long userId);
 
         Optional<Cart> findByUser_IdAndProCode_ProCode(Long userId, Long proCode);

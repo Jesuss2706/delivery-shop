@@ -99,14 +99,14 @@ export class CartService {
   // ============= MÉTODOS CON PL/SQL =============
 
   // Agregar producto al carrito usando PL/SQL
-  addToCartPLSQL(cartItem: CartItemDTO): Observable<string> {
-    return this.http.post<string>(`${this.apiUrl}/cart/plsql`, cartItem);
+  addToCartPLSQL(cartItem: CartItemDTO): Observable<{ message: string; success: boolean }> {
+    return this.http.post<{ message: string; success: boolean }>(`${this.apiUrl}/cart/plsql`, cartItem);
   }
 
   // Actualizar cantidad usando PL/SQL
-  updateCartQuantityPLSQL(cartID: number, quantity: number): Observable<string> {
+  updateCartQuantityPLSQL(cartID: number, quantity: number): Observable<{ message: string; success: boolean }> {
     const params = new HttpParams().set('quantity', quantity.toString());
-    return this.http.put<string>(`${this.apiUrl}/cart/plsql/${cartID}`, null, { params });
+    return this.http.put<{ message: string; success: boolean }>(`${this.apiUrl}/cart/plsql/${cartID}`, null, { params });
   }
 
   // Eliminar producto del carrito usando PL/SQL

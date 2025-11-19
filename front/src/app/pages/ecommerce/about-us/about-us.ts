@@ -23,7 +23,7 @@ export class AboutUsComponent {
   a las necesidades de cada usuario, desde entusiastas de la tecnología hasta profesionales del sector. 
   En TechPads trabajamos cada día para acercarte a la tecnología de manera fácil, segura y accesible.`;
 
-  groupPhoto = 'images/sofitaabrite.jpg';
+  groupPhoto = 'images/fotogrupal.jpg';
 
   teamMembers: TeamMember[] = [
     {

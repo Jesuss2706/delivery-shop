@@ -11,8 +11,6 @@ import { UserService, User, UpdateUserRequest, ClientDetail } from '../../../ser
 import { HttpClientModule } from '@angular/common/http';
 import { Router } from '@angular/router';
 
-// Elimina la interfaz UserData duplicada y usa la del servicio
-
 @Component({
   selector: 'app-user-update',
   standalone: true,
@@ -26,6 +24,7 @@ export class UserUpdate implements OnInit {
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
   
+  // Formulario principal
   userForm = {
     primerNombre: '',
     segundoNombre: '',
@@ -43,6 +42,15 @@ export class UserUpdate implements OnInit {
     ciudad: '',
   };
 
+  // Formulario de cambio de contraseña
+  passwordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+
+  showPasswordForm = false;
+  
   tiposDireccion = [
     { value: 'calle', label: 'Calle' },
     { value: 'carrera', label: 'Carrera' },
@@ -66,11 +74,13 @@ export class UserUpdate implements OnInit {
   isLoadingDepartments = false;
   isLoadingCities = false;
   isSubmitting = false;
+  isChangingPassword = false;
   errorMessage = '';
   successMessage = '';
-  userData: User | null = null; // Cambiado a User en lugar de UserData
+  userData: User | null = null;
 
   fieldErrors: { [key: string]: string } = {};
+  passwordErrors: { [key: string]: string } = {};
 
   constructor(
     private locationService: CitiesDepartmentService,
@@ -85,7 +95,13 @@ export class UserUpdate implements OnInit {
   }
 
   loadUserData(): void {
+    // Primero intentar obtener del UserService
     this.userData = this.userService.getCurrentUser();
+    
+    // Si no hay datos en UserService, intentar obtener del AuthService
+    if (!this.userData) {
+      this.userData = this.authService.getCurrentUser();
+    }
     
     if (!this.userData) {
       this.showToastMessage('No se encontraron datos de usuario', 'error');
@@ -119,7 +135,6 @@ export class UserUpdate implements OnInit {
   parseAddress(address: string): void {
     if (!address) return;
     
-    // Ejemplo: "Carrera 12 Sur # 32"
     const parts = address.split('#');
     
     if (parts.length >= 2) {
@@ -131,7 +146,6 @@ export class UserUpdate implements OnInit {
       if (words.length >= 2) {
         this.userForm.tipoDireccion = words[0].toLowerCase();
         
-        // Buscar sufijo
         const suffixes = ['sur', 'este', 'norte', 'oeste'];
         let numero = '';
         let sufijo = '';
@@ -160,7 +174,6 @@ export class UserUpdate implements OnInit {
         this.departments = data;
         this.isLoadingDepartments = false;
         
-        // Cargar ciudades del departamento actual
         if (this.userForm.departamento) {
           this.loadCitiesForDepartment(Number(this.userForm.departamento));
         }
@@ -201,6 +214,7 @@ export class UserUpdate implements OnInit {
     this.loadCitiesForDepartment(departmentId);
   }
 
+  // ========== VALIDACIONES FORMULARIO PRINCIPAL ==========
   validateField(fieldName: string, value: string): void {
     switch (fieldName) {
       case 'primerNombre':
@@ -380,7 +394,6 @@ export class UserUpdate implements OnInit {
       'primerNombre',
       'primerApellido',
       'correo',
-      'username',
       'telefono',
       'departamento',
       'ciudad',
@@ -404,6 +417,87 @@ export class UserUpdate implements OnInit {
     return true;
   }
 
+  // ========== VALIDACIONES CONTRASEÑA ==========
+  validatePasswordField(fieldName: string, value: string): void {
+    switch (fieldName) {
+      case 'currentPassword':
+        this.validateCurrentPassword(value);
+        break;
+      case 'newPassword':
+        this.validateNewPassword(value);
+        break;
+      case 'confirmPassword':
+        this.validateConfirmPassword(value);
+        break;
+    }
+  }
+
+  validateCurrentPassword(value: string): void {
+    if (!value) {
+      this.passwordErrors['currentPassword'] = 'La contraseña actual es obligatoria';
+    } else {
+      delete this.passwordErrors['currentPassword'];
+    }
+  }
+
+  validateNewPassword(value: string): void {
+  if (!value) {
+    this.passwordErrors['newPassword'] = 'La nueva contraseña es obligatoria';
+    return;
+  }
+
+  // Expresión regular corregida - más permisiva con caracteres especiales
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+  if (this.hasDangerousKeywords(value)) {
+    this.passwordErrors['newPassword'] = 'La contraseña contiene palabras no permitidas';
+  } else if (value.length < 8) {
+    this.passwordErrors['newPassword'] = 'Mínimo 8 caracteres';
+  } else if (!/(?=.*[a-z])/.test(value)) {
+    this.passwordErrors['newPassword'] = 'Debe contener al menos una minúscula';
+  } else if (!/(?=.*[A-Z])/.test(value)) {
+    this.passwordErrors['newPassword'] = 'Debe contener al menos una mayúscula';
+  } else if (!/(?=.*\d)/.test(value)) {
+    this.passwordErrors['newPassword'] = 'Debe contener al menos un número';
+  } else if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(value)) {
+    this.passwordErrors['newPassword'] = 'Debe contener al menos un carácter especial';
+  } else {
+    delete this.passwordErrors['newPassword'];
+  }
+
+  // Validar confirmación si ya hay valor
+  if (this.passwordForm.confirmPassword) {
+    this.validateConfirmPassword(this.passwordForm.confirmPassword);
+  }
+}
+
+  validateConfirmPassword(value: string): void {
+    if (!value) {
+      this.passwordErrors['confirmPassword'] = 'Confirma tu nueva contraseña';
+      return;
+    }
+
+    if (value !== this.passwordForm.newPassword) {
+      this.passwordErrors['confirmPassword'] = 'Las contraseñas no coinciden';
+    } else {
+      delete this.passwordErrors['confirmPassword'];
+    }
+  }
+
+  validatePasswordForm(): boolean {
+    // Validar todos los campos
+    this.validateCurrentPassword(this.passwordForm.currentPassword);
+    this.validateNewPassword(this.passwordForm.newPassword);
+    this.validateConfirmPassword(this.passwordForm.confirmPassword);
+
+    if (Object.keys(this.passwordErrors).length > 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // ========== MÉTODOS PRINCIPALES ==========
   getFieldLabel(fieldName: string): string {
     const labels: { [key: string]: string } = {
       primerNombre: 'Primer nombre',
@@ -420,9 +514,23 @@ export class UserUpdate implements OnInit {
     return labels[fieldName] || fieldName;
   }
 
+  togglePasswordForm(): void {
+    this.showPasswordForm = !this.showPasswordForm;
+    if (!this.showPasswordForm) {
+      this.resetPasswordForm();
+    }
+  }
 
+  resetPasswordForm(): void {
+    this.passwordForm = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    };
+    this.passwordErrors = {};
+  }
 
-onSubmit(): void {
+  onSubmit(): void {
   this.errorMessage = '';
   this.successMessage = '';
 
@@ -432,9 +540,10 @@ onSubmit(): void {
 
   this.isSubmitting = true;
 
+  // Estructura CORRECTA que espera el backend (UpdateUserRequest plano)
   const updateData: UpdateUserRequest = {
     id: this.userData?.id,
-    username: this.userForm.username,
+    username: this.userData?.username || '', // Mantener el username original
     email: this.userForm.correo,
     phone: this.userForm.telefono,
     role: this.userData?.role || 'CLIENT',
@@ -455,19 +564,28 @@ onSubmit(): void {
     },
   };
 
-  console.log('Datos a actualizar:', updateData);
+  console.log('🔍 Datos a enviar al servidor:', JSON.stringify(updateData, null, 2));
+  console.log('🔍 UserData actual:', this.userData);
 
   this.userService.updateCurrentUser(updateData).subscribe({
     next: (updatedUser) => {
+      console.log('✅ Respuesta del servidor:', updatedUser);
       this.isSubmitting = false;
+      
+      // Actualizar datos en ambos servicios
+      this.userData = updatedUser;
+      this.userService.updateLocalStorage(updatedUser);
+      this.authService.updateUserData(updatedUser as any);
+      
       this.showToastMessage('¡Información actualizada exitosamente!', 'success');
-      // Redirigir después de 2 segundos
+      
+      // Redirigir después de 1.5 segundos
       setTimeout(() => {
         this.router.navigate(['/store']);
-      }, 2000);
+      }, 1500);
     },
     error: (error) => {
-      console.error('Error al actualizar usuario:', error);
+      console.error('❌ Error al actualizar usuario:', error);
       this.isSubmitting = false;
       this.showToastMessage(
         error.message || 'Error al actualizar la información. Por favor, intenta nuevamente.',
@@ -476,6 +594,72 @@ onSubmit(): void {
     },
   });
 }
+
+  onChangePassword(): void {
+    if (!this.validatePasswordForm()) {
+      this.showToastMessage('Por favor corrige los errores en el formulario de contraseña', 'error');
+      return;
+    }
+
+    this.isChangingPassword = true;
+    this.errorMessage = '';
+
+    // Estructura completa que incluye contraseña + todos los datos del usuario
+    const updateDataWithPassword: UpdateUserRequest = {
+      id: this.userData?.id,
+      username: this.userData?.username || '',
+      email: this.userForm.correo,
+      phone: this.userForm.telefono,
+      role: this.userData?.role || 'CLIENT',
+      clientDetail: {
+        id: this.userData?.clientDetail?.id,
+        firstName: this.userForm.primerNombre,
+        secondName: this.userForm.segundoNombre || '',
+        firstLastName: this.userForm.primerApellido,
+        secondLastName: this.userForm.segundoApellido || '',
+        address: this.buildMainAddress(),
+        descAddress: this.userForm.complementoDireccion || '',
+        city: {
+          cityID: Number(this.userForm.ciudad),
+        },
+        department: {
+          depID: Number(this.userForm.departamento),
+        },
+      },
+      currentPassword: this.passwordForm.currentPassword,
+      newPassword: this.passwordForm.newPassword,
+    };
+
+    console.log('🔍 Cambio de contraseña con datos completos:', JSON.stringify(updateDataWithPassword, null, 2));
+
+    this.userService.updateCurrentUser(updateDataWithPassword).subscribe({
+      next: (updatedUser) => {
+        console.log('✅ Contraseña y datos actualizados:', updatedUser);
+        this.isChangingPassword = false;
+        
+        // Actualizar datos en ambos servicios
+        this.userData = updatedUser;
+        this.userService.updateLocalStorage(updatedUser);
+        this.authService.updateUserData(updatedUser as any);
+        
+        this.showToastMessage('¡Contraseña y datos actualizados exitosamente!', 'success');
+        this.togglePasswordForm();
+        this.resetPasswordForm();
+        
+        // Redirigir después de 1.5 segundos
+        setTimeout(() => {
+          this.router.navigate(['/store']);
+        }, 1500);
+      },
+      error: (error) => {
+        this.isChangingPassword = false;
+        this.showToastMessage(
+          error.message || 'Error al actualizar. Por favor, intenta nuevamente.',
+          'error'
+        );
+      },
+    });
+  }
 
   showToastMessage(message: string, type: 'success' | 'error'): void {
     this.toastMessage = message;
@@ -525,8 +709,20 @@ onSubmit(): void {
     return this.fieldErrors[fieldName] || '';
   }
 
+  hasPasswordError(fieldName: string): boolean {
+    return !!this.passwordErrors[fieldName];
+  }
+
+  getPasswordError(fieldName: string): string {
+    return this.passwordErrors[fieldName] || '';
+  }
+
   hasFieldErrors(): boolean {
     return Object.keys(this.fieldErrors).length > 0;
+  }
+
+  hasPasswordErrors(): boolean {
+    return Object.keys(this.passwordErrors).length > 0;
   }
 
   goBack(): void {

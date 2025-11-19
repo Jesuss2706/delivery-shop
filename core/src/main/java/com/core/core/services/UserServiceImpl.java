@@ -3,6 +3,8 @@ package com.core.core.services;
 import com.core.core.modules.ClientDetail;
 import com.core.core.modules.User;
 import com.core.core.repository.UserRepository;
+import com.core.core.exceptions.UserNotFoundException;
+import com.core.core.exceptions.InvalidCredentialsException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +15,7 @@ import java.security.Key;
 import io.jsonwebtoken.security.Keys;
 import java.util.Date;
 import java.util.List;
+import java.sql.SQLException;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -86,7 +89,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con username: " + username));
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con username: " + username));
     }
 
     @Override
@@ -105,7 +108,7 @@ public class UserServiceImpl implements UserService {
             return generateJwtToken(user);
         }
 
-        throw new RuntimeException("Credenciales incorrectas");
+        throw new InvalidCredentialsException("Contraseña incorrecta para el usuario: " + username);
     }
 
     // =========================
@@ -145,19 +148,28 @@ public class UserServiceImpl implements UserService {
 
         String encryptedPassword = passwordEncoder.encode(user.getPassword());
 
-        userRepository.registrarUsuario(
-                user.getUsername(),
-                encryptedPassword,
-                user.getEmail(),
-                user.getPhone(),
-                clientDetail.getFirstName(),
-                clientDetail.getSecondName(),
-                clientDetail.getFirstLastName(),
-                clientDetail.getSecondLastName(),
-                clientDetail.getAddress(),
-                clientDetail.getDescAddress(),
-                clientDetail.getCity().getCityID(),
-                clientDetail.getDepartment().getDepID());
+        try {
+            userRepository.registrarUsuario(
+                    user.getUsername(),
+                    encryptedPassword,
+                    user.getEmail(),
+                    user.getPhone(),
+                    clientDetail.getFirstName(),
+                    clientDetail.getSecondName(),
+                    clientDetail.getFirstLastName(),
+                    clientDetail.getSecondLastName(),
+                    clientDetail.getAddress(),
+                    clientDetail.getDescAddress(),
+                    clientDetail.getCity().getCityID(),
+                    clientDetail.getDepartment().getDepID());
+        } catch (Exception e) {
+            // Capturar errores de la procedura PL/SQL
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("ORA-20301")) {
+                throw new RuntimeException("ORA-20301: El nombre de usuario o correo ya existe");
+            }
+            throw e;
+        }
 
         User createdUser = userRepository.findByUsername(user.getUsername())
                 .orElseThrow(() -> new RuntimeException("No se pudo recuperar el usuario creado"));
@@ -169,11 +181,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public User updateClient(Long userId, User user, ClientDetail clientDetail) {
 
-        String encryptedPassword = null;
+         String encryptedPassword = null;
+    if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+        // Si se proporciona nueva contraseña, encriptarla
+        encryptedPassword = passwordEncoder.encode(user.getPassword());
+    } else {
+        // Si no se proporciona nueva contraseña, obtener la actual de la base de datos
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + userId));
+        encryptedPassword = existingUser.getPassword();
+    }
 
-        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            encryptedPassword = passwordEncoder.encode(user.getPassword());
-        }
+    // Validar que tenemos una contraseña (no puede ser null)
+    if (encryptedPassword == null) {
+        throw new RuntimeException("La contraseña no puede ser nula");
+    }
 
         userRepository.modificarUsuario(
                 userId,

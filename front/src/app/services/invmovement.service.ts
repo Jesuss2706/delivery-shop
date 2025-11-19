@@ -54,20 +54,89 @@ export class InvMovementService {
 
   constructor(private http: HttpClient) {}
 
-  // ============ MÉTODOS PRINCIPALES ============
+  // ============ MÉTODOS CON PL/SQL ============
 
   /**
-   * Obtener todos los movimientos
+   * Obtener todos los movimientos usando PL/SQL
    */
-  getAllMovements(): Observable<InvMovement[]> {
-    return this.http.get<InvMovement[]>(this.apiUrl);
+  getAllMovementsPLSQL(): Observable<InvMovement[]> {
+    return this.http.get<InvMovement[]>(`${this.apiUrl}/plsql`);
   }
+
+  /**
+   * Obtener movimientos activos usando PL/SQL
+   */
+  getActiveMovementsPLSQL(): Observable<InvMovement[]> {
+    return this.http.get<InvMovement[]>(`${this.apiUrl}/plsql/active`);
+  }
+
+  /**
+   * Obtener movimiento por ID usando PL/SQL
+   */
+  getMovementByIdPLSQL(id: number): Observable<InvMovement> {
+    return this.http.get<InvMovement>(`${this.apiUrl}/plsql/${id}`);
+  }
+
+  /**
+   * Buscar movimientos por código de inventario usando PL/SQL
+   */
+  getMovementsByInventoryPLSQL(invCode: number): Observable<InvMovement[]> {
+    return this.http.get<InvMovement[]>(`${this.apiUrl}/plsql/inventory/${invCode}`);
+  }
+
+  /**
+   * Buscar movimientos por tipo usando PL/SQL
+   */
+  getMovementsByTypePLSQL(movType: string): Observable<InvMovement[]> {
+    return this.http.get<InvMovement[]>(`${this.apiUrl}/plsql/type/${movType}`);
+  }
+
+  /**
+   * Buscar movimientos por orden usando PL/SQL
+   */
+  getMovementsByOrderPLSQL(ordID: number): Observable<InvMovement[]> {
+    return this.http.get<InvMovement[]>(`${this.apiUrl}/plsql/order/${ordID}`);
+  }
+
+  /**
+   * Buscar movimientos por rango de fechas usando PL/SQL
+   */
+  getMovementsByDateRangePLSQL(startDate: string, endDate: string): Observable<InvMovement[]> {
+    return this.http
+      .get<InvMovement[]>(`${this.apiUrl}/plsql/date-range`, {
+        params: { startDate, endDate }
+      });
+  }
+
+  /**
+   * Buscar movimientos por inventario y tipo usando PL/SQL
+   */
+  getMovementsByInventoryAndTypePLSQL(invCode: number, movType: string): Observable<InvMovement[]> {
+    return this.http
+      .get<InvMovement[]>(`${this.apiUrl}/plsql/inventory/${invCode}/type/${movType}`);
+  }
+
+  /**
+   * Buscar movimientos por inventario y rango de fechas usando PL/SQL
+   */
+  getMovementsByInventoryAndDateRangePLSQL(
+    invCode: number,
+    startDate: string,
+    endDate: string
+  ): Observable<InvMovement[]> {
+    return this.http
+      .get<InvMovement[]>(`${this.apiUrl}/plsql/inventory/${invCode}/date-range`, {
+        params: { startDate, endDate }
+      });
+  }
+
+  // ============ MÉTODOS JPA (FALLBACK) ============
 
   /**
    * Obtener movimientos activos (filtrado en frontend)
    */
   getActiveMovements(): Observable<InvMovement[]> {
-    return this.getAllMovements().pipe(
+    return this.getAllMovementsPLSQL().pipe(
       map((movements) => this.filterActiveMovements(movements))
     );
   }

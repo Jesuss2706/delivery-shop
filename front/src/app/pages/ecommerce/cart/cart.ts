@@ -95,7 +95,7 @@ export class CartComponent implements OnInit {
   // Cargar el stock disponible para cada item del carrito
   loadStockForCartItems(items: Cart[]): void {
     // Obtener todo el inventario disponible
-    this.inventoryService.getAvailableInventory().subscribe({
+    this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (inventory: InventoryItem[]) => {
         // Mapear los items del carrito con su stock correspondiente
         this.cartItems = items.map(cartItem => {

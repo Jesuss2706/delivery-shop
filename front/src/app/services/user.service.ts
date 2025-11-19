@@ -59,6 +59,13 @@ export interface UpdateUserRequest {
   role: string;
   status?: string;
   clientDetail: ClientDetail;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 @Injectable({
@@ -69,14 +76,32 @@ export class UserService {
 
   constructor(
   private http: HttpClient, 
-  private authService: AuthService  // Agrega esta inyección
+  private authService: AuthService  
 ) {}
+
+  /**
+   * Obtiene todos los usuarios usando PL/SQL
+   */
+  getAllUsersPLSQL(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/plsql`).pipe(
+      catchError(this.handleError)
+    );
+  }
 
   /**
    * Obtiene todos los usuarios
    */
   getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.apiUrl).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Obtiene todos los usuarios activos usando PL/SQL
+   */
+  getAllActiveUsersPLSQL(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/plsql/active`).pipe(
       catchError(this.handleError)
     );
   }
@@ -91,6 +116,15 @@ export class UserService {
   }
 
   /**
+   * Obtiene un usuario por ID usando PL/SQL
+   */
+  getUserByIdPLSQL(id: number): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/plsql/${id}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Obtiene un usuario por ID
    */
   getUserById(id: number): Observable<User> {
@@ -100,10 +134,29 @@ export class UserService {
   }
 
   /**
+   * Obtiene un usuario por username usando PL/SQL
+   */
+  getUserByUsernamePLSQL(username: string): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/plsql/username/${username}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Obtiene un usuario por username
    */
   getUserByUsername(username: string): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/username/${username}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Crea un usuario administrador usando PL/SQL
+   */
+  createUserAdminPLSQL(user: User): Observable<User> {
+    const headers = this.getHeaders();
+    return this.http.post<User>(`${this.apiUrl}/plsql/adm`, user, { headers }).pipe(
       catchError(this.handleError)
     );
   }
@@ -119,11 +172,31 @@ export class UserService {
   }
 
   /**
+   * Crea un cliente (usuario + detalle de cliente) - PARA REGISTRO usando PL/SQL
+   */
+  createClientPLSQL(clientData: RegisterRequest): Observable<User> {
+    const headers = this.getHeaders();
+    return this.http.post<User>(`${this.apiUrl}/plsql`, clientData, { headers }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Crea un cliente (usuario + detalle de cliente) - PARA REGISTRO
    */
   createClient(clientData: RegisterRequest): Observable<User> {
     const headers = this.getHeaders();
     return this.http.post<User>(this.apiUrl, clientData, { headers }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Actualiza un usuario existente usando PL/SQL
+   */
+  updateUserPLSQL(id: number, userData: UpdateUserRequest): Observable<User> {
+    const headers = this.getHeaders();
+    return this.http.put<User>(`${this.apiUrl}/plsql/${id}`, userData, { headers }).pipe(
       catchError(this.handleError)
     );
   }
@@ -138,14 +211,6 @@ export class UserService {
     );
   }
 
-  /**
-   * Actualiza el cliente actual (desde localStorage)
-   */
-  // En UserService - modifica el método updateCurrentUser:
-
-// En user.service.ts - modifica updateCurrentUser
-// En user.service.ts - modifica updateCurrentUser
-
 updateCurrentUser(userData: UpdateUserRequest): Observable<User> {
   const currentUser = this.getCurrentUser();
   
@@ -153,25 +218,37 @@ updateCurrentUser(userData: UpdateUserRequest): Observable<User> {
     return throwError(() => new Error('No hay usuario autenticado'));
   }
 
-  return this.updateUser(currentUser.id, userData).pipe(
-    // Después de actualizar, forzar una recarga de los datos completos
+  const headers = this.getHeaders();
+  
+  // Transformar a la estructura que espera /cli/{id}
+  const clientPayload: any = {
+    user: {
+      username: userData.username,
+      email: userData.email,
+      phone: userData.phone,
+      role: userData.role,
+    },
+    clientDetail: userData.clientDetail,
+  };
+
+  // Si se incluye cambio de contraseña, agregarlo al payload
+  if (userData.currentPassword && userData.newPassword) {
+    clientPayload.currentPassword = userData.currentPassword;
+    clientPayload.newPassword = userData.newPassword;
+  }
+  
+  console.log('🔍 Payload enviado a /cli/{id}:', JSON.stringify(clientPayload, null, 2));
+  
+  return this.http.put<User>(`${this.apiUrl}/cli/${currentUser.id}`, clientPayload, { headers }).pipe(
     switchMap((updatedUser) => {
-      console.log('✅ Usuario actualizado, recargando datos completos...');
+      console.log('✅ Usuario actualizado desde servidor:', updatedUser);
+      console.log('🔄 Recargando datos frescos desde BD por ID...');
       
-      // Forzar una recarga desde el backend para obtener datos frescos
-      return this.getUserById(currentUser.id!).pipe(
-        tap((freshUser) => {
-          console.log('✅ Datos frescos del usuario:', freshUser);
-          this.updateLocalStorage(freshUser);
-          
-          const authUser = {
-            ...freshUser,
-            createdAt: freshUser.createdAt ?? '',
-          } as any;
-          this.authService.updateUserData(authUser);
-        }),
-        map((freshUser) => freshUser)
-      );
+      // Después de actualizar, recarga desde BD por ID (más confiable si cambió el username)
+      return this.authService.refreshUserDataById();
+    }),
+    tap((freshUser) => {
+      console.log('✅ Datos frescos del usuario obtenidos:', freshUser);
     }),
     catchError((error) => {
       console.error('❌ Error en updateCurrentUser:', error);
@@ -181,6 +258,16 @@ updateCurrentUser(userData: UpdateUserRequest): Observable<User> {
 }
 
 
+
+  /**
+   * Elimina un usuario (cambio de estado) usando PL/SQL
+   */
+  deleteUserPLSQL(id: number): Observable<void> {
+    const headers = this.getHeaders();
+    return this.http.delete<void>(`${this.apiUrl}/plsql/${id}`, { headers }).pipe(
+      catchError(this.handleError)
+    );
+  }
 
   /**
    * Elimina un usuario (cambio de estado)
@@ -216,6 +303,8 @@ updateCurrentUser(userData: UpdateUserRequest): Observable<User> {
   updateLocalStorage(user: User): void {
     try {
       localStorage.setItem('user_data', JSON.stringify(user));
+      console.log('💾 localStorage actualizado:', user);
+      console.log('💾 Verificando localStorage:', localStorage.getItem('user_data'));
     } catch (error) {
       console.error('Error al actualizar localStorage:', error);
     }
@@ -242,6 +331,80 @@ updateCurrentUser(userData: UpdateUserRequest): Observable<User> {
     }
 
     return headers;
+  }
+
+  /**
+   * Cambia la contraseña del usuario actual usando PL/SQL
+   */
+  changePasswordPLSQL(changePasswordData: ChangePasswordRequest): Observable<any> {
+    const currentUser = this.getCurrentUser();
+    
+    if (!currentUser || !currentUser.id) {
+      return throwError(() => new Error('No hay usuario autenticado'));
+    }
+
+    const headers = this.getHeaders();
+    
+    return this.http.post(
+      `${this.apiUrl}/plsql/${currentUser.id}/change-password`,
+      changePasswordData,
+      { headers }
+    ).pipe(
+      tap(() => {
+        console.log('✅ Contraseña cambiada exitosamente (PL/SQL)');
+      }),
+      catchError((error) => {
+        console.error('❌ Error al cambiar contraseña:', error);
+        let errorMessage = 'Error al cambiar la contraseña';
+        
+        if (error.status === 401) {
+          errorMessage = 'Contraseña actual incorrecta';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Datos inválidos';
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Cambia la contraseña del usuario actual
+   */
+  changePassword(changePasswordData: ChangePasswordRequest): Observable<any> {
+    const currentUser = this.getCurrentUser();
+    
+    if (!currentUser || !currentUser.id) {
+      return throwError(() => new Error('No hay usuario autenticado'));
+    }
+
+    const headers = this.getHeaders();
+    
+    return this.http.post(
+      `${this.apiUrl}/${currentUser.id}/change-password`,
+      changePasswordData,
+      { headers }
+    ).pipe(
+      tap(() => {
+        console.log('✅ Contraseña cambiada exitosamente');
+      }),
+      catchError((error) => {
+        console.error('❌ Error al cambiar contraseña:', error);
+        let errorMessage = 'Error al cambiar la contraseña';
+        
+        if (error.status === 401) {
+          errorMessage = 'Contraseña actual incorrecta';
+        } else if (error.status === 400) {
+          errorMessage = error.error?.message || 'Datos inválidos';
+        } else if (error.error?.message) {
+          errorMessage = error.error.message;
+        }
+        
+        return throwError(() => new Error(errorMessage));
+      })
+    );
   }
 
   /**

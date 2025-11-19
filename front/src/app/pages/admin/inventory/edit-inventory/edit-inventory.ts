@@ -100,7 +100,7 @@ export class EditInventoryComponent implements OnInit {
 
   loadInventoryData(invCode: number): void {
     this.loading = true;
-    this.inventoryService.getInventoryItem(invCode).subscribe({
+    this.inventoryService.getInventoryItemPLSQL(invCode).subscribe({
       next: (data: InventoryItem) => {
         console.log('📥 Inventario cargado:', data);
 

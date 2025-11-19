@@ -143,7 +143,7 @@ export class InvMovementComponent implements OnInit {
     // Si hay filtros específicos, usar endpoints del backend
     if (this.selectedInventory && this.selectedType) {
       // Filtrar por inventario y tipo
-      this.invMovementService.getMovementsByInventoryAndType(
+      this.invMovementService.getMovementsByInventoryAndTypePLSQL(
         this.selectedInventory, 
         this.selectedType
       ).subscribe({
@@ -152,7 +152,7 @@ export class InvMovementComponent implements OnInit {
       });
     } else if (this.selectedInventory && this.selectedStartDate && this.selectedEndDate) {
       // Filtrar por inventario y fecha
-      this.invMovementService.getMovementsByInventoryAndDateRange(
+      this.invMovementService.getMovementsByInventoryAndDateRangePLSQL(
         this.selectedInventory,
         this.selectedStartDate,
         this.selectedEndDate
@@ -162,19 +162,19 @@ export class InvMovementComponent implements OnInit {
       });
     } else if (this.selectedInventory) {
       // Filtrar solo por inventario
-      this.invMovementService.getMovementsByInventory(this.selectedInventory).subscribe({
+      this.invMovementService.getMovementsByInventoryPLSQL(this.selectedInventory).subscribe({
         next: (movements) => this.handleFilteredMovements(movements),
         error: (err) => this.handleFilterError(err)
       });
     } else if (this.selectedType) {
       // Filtrar solo por tipo
-      this.invMovementService.getMovementsByType(this.selectedType).subscribe({
+      this.invMovementService.getMovementsByTypePLSQL(this.selectedType).subscribe({
         next: (movements) => this.handleFilteredMovements(movements),
         error: (err) => this.handleFilterError(err)
       });
     } else if (this.selectedStartDate && this.selectedEndDate) {
       // Filtrar solo por fecha
-      this.invMovementService.getMovementsByDateRange(
+      this.invMovementService.getMovementsByDateRangePLSQL(
         this.selectedStartDate,
         this.selectedEndDate
       ).subscribe({
