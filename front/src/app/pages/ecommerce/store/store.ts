@@ -28,14 +28,19 @@ export class StoreComponent implements OnInit, OnDestroy {
     type: 'success' as 'success' | 'error' | 'warning'
   };
 
+  // Variables para control de roles
+  isAdmin: boolean = false;
+  currentUser: any = null;
+
   constructor(
     private inventoryService: InventoryService, 
     private router: Router,
     private cartService: CartService,
-    private authService: AuthService
+    public authService: AuthService 
   ) {}
 
   ngOnInit(): void {
+    this.loadUserRole(); // Cargar el rol del usuario
     this.loadInventory();
     
     this.filterSubscription = this.inventoryService.typeCodeFilter$.subscribe(
@@ -57,9 +62,21 @@ export class StoreComponent implements OnInit, OnDestroy {
     this.filterSubscription?.unsubscribe();
   }
 
+  loadUserRole(): void {
+    // Método 1: Desde localStorage
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      this.currentUser = JSON.parse(userData);
+      this.isAdmin = this.currentUser?.role === 'ADMIN';
+    }
+
+    
+    console.log('👤 Usuario es ADMIN:', this.isAdmin);
+  }
+
   loadInventory(): void {
     console.log('📦 Cargando inventario...');
-    this.inventoryService.getAvailableInventory().subscribe({
+    this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (data: InventoryItem[]) => {
         console.log('✅ Inventario cargado:', data.length, 'items');
         this.inventoryItems = data;
@@ -120,6 +137,12 @@ export class StoreComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Verificar si es ADMIN (doble seguridad)
+    if (this.isAdmin) {
+      this.showToast('Los administradores no pueden realizar compras', 'warning');
+      return;
+    }
+
     const userId = this.authService.getUserId();
     if (!userId) {
       this.showToast('Error: No se pudo identificar al usuario', 'error');
@@ -145,10 +168,10 @@ export class StoreComponent implements OnInit, OnDestroy {
     console.log('📤 Enviando CartItemDTO:', cartItemDTO);
 
     // Llamar al servicio del carrito
-    this.cartService.addToCart(cartItemDTO).subscribe({
+    this.cartService.addToCartPLSQL(cartItemDTO).subscribe({
       next: (cartResponse) => {
         console.log('✅ Producto agregado al carrito:', cartResponse);
-        this.showToast(`¡${item.product.proName} agregado al carrito! 🛒`, 'success');
+        this.showToast(cartResponse.message || `¡${item.product.proName} agregado al carrito! 🛒`, 'success');
         this.loadingAddToCart[item.invCode!] = false;
       },
       error: (error) => {
@@ -174,10 +197,10 @@ export class StoreComponent implements OnInit, OnDestroy {
       type
     };
 
-    // Ocultar automáticamente después de 3 segundos
+    // Ocultar automáticamente después de 5 segundos
     setTimeout(() => {
       this.toast.show = false;
-    }, 3000);
+    }, 5000);
   }
 
   // Método para cerrar manualmente el toast
@@ -188,5 +211,10 @@ export class StoreComponent implements OnInit, OnDestroy {
   // Método para verificar si un producto está cargando
   isLoadingProduct(invCode: number): boolean {
     return this.loadingAddToCart[invCode] === true;
+  }
+
+  // Método helper para verificar si es cliente (opcional)
+  isClient(): boolean {
+    return !this.isAdmin && this.authService.isLoggedIn();
   }
 }

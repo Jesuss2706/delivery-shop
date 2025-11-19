@@ -49,10 +49,41 @@ export class InventoryService {
 
   constructor(private http: HttpClient) {}
 
-  // Obtener todo el inventario (sin filtros - incluye inactivos)
-  getAllInventory(): Observable<InventoryItem[]> {
-    return this.http.get<InventoryItem[]>(`${this.apiUrl}/inventory`);
+  // ============ MÉTODOS CON PL/SQL ==============
+
+  getAllInventoryPLSQL(): Observable<InventoryItem[]> {
+    return this.http.get<InventoryItem[]>(`${this.apiUrl}/inventory/plsql`);
   }
+
+  getAvailableInventoryPLSQL(): Observable<InventoryItem[]> {
+    return this.http.get<InventoryItem[]>(`${this.apiUrl}/inventory/plsql/active`);
+  }
+
+  getInventoryByTypePLSQL(typeCode: number): Observable<InventoryItem[]> {
+    return this.http.get<InventoryItem[]>(`${this.apiUrl}/inventory/plsql/type/${typeCode}`);
+  }
+
+  getInventoryItemPLSQL(invCode: number): Observable<InventoryItem> {
+    return this.http.get<InventoryItem>(`${this.apiUrl}/inventory/plsql/${invCode}`);
+  }
+
+  createInventoryItemPLSQL(inventoryData: InventoryItem): Observable<InventoryItem> {
+    return this.http.post<InventoryItem>(`${this.apiUrl}/inventory/plsql`, inventoryData);
+  }
+
+  updateInventoryItemPLSQL(invCode: number, data: Partial<InventoryItem>): Observable<InventoryItem> {
+    return this.http.put<InventoryItem>(`${this.apiUrl}/inventory/plsql/${invCode}`, data);
+  }
+
+  deleteInventoryItemPLSQL(invCode: number): Observable<InventoryItem> {
+    return this.http.delete<InventoryItem>(`${this.apiUrl}/inventory/plsql/${invCode}`);
+  }
+
+  updateInventoryStatusPLSQL(invCode: number, status: string): Observable<InventoryItem> {
+    return this.http.put<InventoryItem>(`${this.apiUrl}/inventory/plsql/${invCode}/status`, { status });
+  }
+
+  // ============ MÉTODOS JPA (FALLBACK) ==============
 
   // Obtener inventario disponible (filtrado en frontend)
   getAvailableInventory(): Observable<InventoryItem[]> {

@@ -1,0 +1,314 @@
+<div class="update-container">
+  <!-- Toast Message -->
+  <div *ngIf="showToast" class="toast {{ toastType }}" (click)="closeToast()">
+    <div class="toast-icon">
+      <span *ngIf="toastType === 'success'">✓</span>
+      <span *ngIf="toastType === 'error'">✕</span>
+    </div>
+    <div class="toast-message">{{ toastMessage }}</div>
+    <button class="toast-close" (click)="closeToast(); $event.stopPropagation()">×</button>
+  </div>
+
+  <div class="update-content">
+    <!-- Columna Izquierda -->
+    <div class="update-left">
+      <button class="back-btn" (click)="goBack()">
+        <span>←</span> Volver
+      </button>
+      
+      <div class="update-illustration">
+        <svg viewBox="0 0 200 200" class="illustration-svg">
+          <circle cx="100" cy="80" r="40" fill="#3B82F6" opacity="0.2" />
+          <rect x="60" y="130" width="80" height="60" rx="8" fill="#3B82F6" opacity="0.3" />
+          <circle cx="100" cy="80" r="25" fill="#3B82F6" />
+          <path d="M 75 150 L 85 160 L 75 170" stroke="#3B82F6" stroke-width="3" fill="none" />
+        </svg>
+      </div>
+      
+      <h3>Actualiza tu información</h3>
+      <p class="update-subtitle">
+        Mantén tus datos al día para una mejor experiencia
+      </p>
+
+      <ul class="benefits-list">
+        <li>
+          <span class="icon">✏️</span>
+          <span>Edita tu información personal</span>
+        </li>
+        <li>
+          <span class="icon">📍</span>
+          <span>Actualiza tu dirección de entrega</span>
+        </li>
+        <li>
+          <span class="icon">✅</span>
+          <span>Mantén tus datos seguros</span>
+        </li>
+      </ul>
+
+      
+      
+    </div>
+
+    <!-- Columna Derecha -->
+    <div class="update-right">
+      <h2>Actualizar Información</h2>
+
+      <!-- Mensajes globales -->
+      <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
+      
+
+      <!-- Formulario Principal -->
+      <form  (ngSubmit)="onSubmit()" #updateForm="ngForm">
+        <div class="form-grid">
+          <!-- Nombres y Apellidos -->
+          <div class="input-label">
+            <label>Primer nombre*</label>
+            <input
+              type="text"
+              [(ngModel)]="userForm.primerNombre"
+              name="primerNombre"
+              required
+              maxlength="20"
+              (blur)="validateField('primerNombre', userForm.primerNombre)"
+              [class.error]="hasError('primerNombre')"
+            />
+            <div *ngIf="hasError('primerNombre')" class="field-error">
+              {{ getError('primerNombre') }}
+            </div>
+          </div>
+
+          <div class="input-label">
+            <label>Segundo nombre</label>
+            <input
+              type="text"
+              [(ngModel)]="userForm.segundoNombre"
+              name="segundoNombre"
+              maxlength="20"
+              (blur)="validateField('segundoNombre', userForm.segundoNombre)"
+              [class.error]="hasError('segundoNombre')"
+            />
+            <div *ngIf="hasError('segundoNombre')" class="field-error">
+              {{ getError('segundoNombre') }}
+            </div>
+          </div>
+
+          <div class="input-label">
+            <label>Primer apellido*</label>
+            <input
+              type="text"
+              [(ngModel)]="userForm.primerApellido"
+              name="primerApellido"
+              required
+              maxlength="20"
+              (blur)="validateField('primerApellido', userForm.primerApellido)"
+              [class.error]="hasError('primerApellido')"
+            />
+            <div *ngIf="hasError('primerApellido')" class="field-error">
+              {{ getError('primerApellido') }}
+            </div>
+          </div>
+
+          <div class="input-label">
+            <label>Segundo apellido</label>
+            <input
+              type="text"
+              [(ngModel)]="userForm.segundoApellido"
+              name="segundoApellido"
+              maxlength="20"
+              (blur)="validateField('segundoApellido', userForm.segundoApellido)"
+              [class.error]="hasError('segundoApellido')"
+            />
+            <div *ngIf="hasError('segundoApellido')" class="field-error">
+              {{ getError('segundoApellido') }}
+            </div>
+          </div>
+
+          <!-- Correo -->
+          <div class="input-label full-width">
+            <label>Correo electrónico*</label>
+            <input
+              type="email"
+              [(ngModel)]="userForm.correo"
+              name="correo"
+              required
+              (blur)="validateField('correo', userForm.correo)"
+              [class.error]="hasError('correo')"
+            />
+            <div *ngIf="hasError('correo')" class="field-error">
+              {{ getError('correo') }}
+            </div>
+          </div>
+
+          <!-- Username -->
+          <div class="input-label full-width">
+            <label>Nombre de usuario*</label>
+            <input
+              type="text"
+              [(ngModel)]="userForm.username"
+              name="username"
+              required
+              maxlength="16"
+              disabled
+              [class.error]="hasError('username')"
+            />
+            <small class="hint">El nombre de usuario no puede ser modificado</small>
+          </div>
+
+          <!-- Teléfono -->
+          <div class="input-label full-width">
+            <label>Teléfono*</label>
+            <input
+              type="tel"
+              [(ngModel)]="userForm.telefono"
+              name="telefono"
+              required
+              (blur)="validateField('telefono', userForm.telefono)"
+              [class.error]="hasError('telefono')"
+              maxlength="10"
+            />
+            <div *ngIf="hasError('telefono')" class="field-error">
+              {{ getError('telefono') }}
+            </div>
+            <small class="hint">Debe empezar con 3 y tener 10 dígitos</small>
+          </div>
+
+          <!-- Dirección - Estructura Colombiana -->
+          <div class="address-section full-width">
+            <h4>Dirección</h4>
+            <div class="address-grid">
+              <div class="input-label">
+                <label>Tipo de vía*</label>
+                <select [(ngModel)]="userForm.tipoDireccion" name="tipoDireccion" required>
+                  <option value="">Seleccione...</option>
+                  <option *ngFor="let tipo of tiposDireccion" [value]="tipo.value">
+                    {{ tipo.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="input-label">
+                <label>Número*</label>
+                <input
+                  type="text"
+                  [(ngModel)]="userForm.numeroDireccion"
+                  name="numeroDireccion"
+                  required
+                  maxlength="10"
+                  (blur)="validateField('numeroDireccion', userForm.numeroDireccion)"
+                  [class.error]="hasError('numeroDireccion')"
+                />
+                <div *ngIf="hasError('numeroDireccion')" class="field-error">
+                  {{ getError('numeroDireccion') }}
+                </div>
+              </div>
+
+              <div class="input-label">
+                <label>Sufijo</label>
+                <select [(ngModel)]="userForm.sufijoDireccion" name="sufijoDireccion">
+                  <option *ngFor="let sufijo of sufijosDireccion" [value]="sufijo.value">
+                    {{ sufijo.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="input-label">
+                <label># Cruce*</label>
+                <input
+                  type="text"
+                  [(ngModel)]="userForm.numeroCruce"
+                  name="numeroCruce"
+                  required
+                  maxlength="10"
+                  (blur)="validateField('numeroCruce', userForm.numeroCruce)"
+                  [class.error]="hasError('numeroCruce')"
+                />
+                <div *ngIf="hasError('numeroCruce')" class="field-error">
+                  {{ getError('numeroCruce') }}
+                </div>
+              </div>
+
+              <div class="input-label full-width">
+                <label>Complemento (opcional)</label>
+                <input
+                  type="text"
+                  [(ngModel)]="userForm.complementoDireccion"
+                  name="complementoDireccion"
+                  placeholder="Ej: Apartamento 201, Bloque 2, Casa 5B, etc."
+                  (blur)="validateField('complementoDireccion', userForm.complementoDireccion)"
+                  [class.error]="hasError('complementoDireccion')"
+                  maxlength="50"
+                />
+                <div *ngIf="hasError('complementoDireccion')" class="field-error">
+                  {{ getError('complementoDireccion') }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Vista previa de la dirección -->
+            <div
+              *ngIf="userForm.tipoDireccion && userForm.numeroDireccion && userForm.numeroCruce"
+              class="address-preview"
+            >
+              <strong>Vista previa:</strong>
+              {{ buildMainAddress() }}
+            </div>
+          </div>
+
+          <!-- Departamento y Ciudad -->
+          <div class="input-label">
+            <label>Departamento*</label>
+            <select
+              [(ngModel)]="userForm.departamento"
+              name="departamento"
+              (change)="onDepartmentChange()"
+              [disabled]="isLoadingDepartments"
+              required
+            >
+              <option value="">
+                {{ isLoadingDepartments ? 'Cargando...' : 'Seleccione' }}
+              </option>
+              <option *ngFor="let dept of departments" [value]="dept.id">
+                {{ dept.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="input-label">
+            <label>Ciudad*</label>
+            <select
+              [(ngModel)]="userForm.ciudad"
+              name="ciudad"
+              [disabled]="!userForm.departamento || isLoadingCities"
+              required
+            >
+              <option value="">
+                {{
+                  isLoadingCities
+                    ? 'Cargando...'
+                    : !userForm.departamento
+                    ? 'Seleccione departamento'
+                    : 'Seleccione'
+                }}
+              </option>
+              <option *ngFor="let city of cities" [value]="city.id">
+                {{ city.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="button" class="btn-cancelar" (click)="goBack()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-actualizar" [disabled]="isSubmitting || hasFieldErrors()">
+            {{ isSubmitting ? 'Actualizando...' : 'Guardar Cambios' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

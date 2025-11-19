@@ -48,7 +48,7 @@ export class ProductDetailComponent implements OnInit {
   }
 
   loadProductDetail(productId: number): void {
-    this.inventoryService.getInventoryItem(productId).subscribe({
+    this.inventoryService.getInventoryItemPLSQL(productId).subscribe({
       next: (data: InventoryItem) => {
         this.product = data;
         this.selectedImage = data.product?.proImg || 'assets/placeholder-product.jpg';

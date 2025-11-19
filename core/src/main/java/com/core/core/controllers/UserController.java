@@ -3,6 +3,8 @@ package com.core.core.controllers;
 import com.core.core.modules.Client;
 import com.core.core.modules.ClientDetail;
 import com.core.core.modules.User;
+import com.core.core.modules.City;
+import com.core.core.modules.Department;
 import com.core.core.services.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +72,121 @@ public class UserController {
                     .body("No se encontro ningun usuario con el id: " + id);
         }
         return ResponseEntity.ok(user);
+    }
+
+    // ============ ENDPOINTS PL/SQL ============
+
+    @GetMapping("/plsql")
+    public ResponseEntity<List<User>> getAllUsersPLSQL() {
+        List<User> users = userService.getAllUsers();
+        if (users.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/plsql/active")
+    public ResponseEntity<List<User>> getAllActiveUsersPLSQL() {
+        List<User> users = userService.getAllUsersActive();
+        if (users.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/plsql/{id}")
+    public ResponseEntity<?> getUserByIdPLSQL(@PathVariable Long id) {
+        User user = userService.getUserById(id);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontro ningun usuario con el id: " + id);
+        }
+        return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/plsql/username/{username}")
+    public ResponseEntity<?> getUserByUsernamePLSQL(@PathVariable String username) {
+        try {
+            User user = userService.getUserByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No se encontró ningún usuario con el username: " + username);
+            }
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontró ningún usuario con el username: " + username);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al buscar el usuario: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/plsql")
+    public ResponseEntity<?> createUserPLSQL(@Valid @RequestBody User user, BindingResult result) {
+        if (result.hasErrors()) {
+            Map<String, String> errors = result.getFieldErrors().stream()
+                    .collect(Collectors.toMap(
+                            fieldError -> fieldError.getField(),
+                            fieldError -> fieldError.getDefaultMessage()));
+            return ResponseEntity.badRequest().body(errors);
+        }
+
+        try {
+            // Create default ClientDetail if not provided
+            ClientDetail clientDetail = new ClientDetail();
+            clientDetail.setFirstName(user.getUsername());
+            clientDetail.setAddress("N/A");
+            clientDetail.setDescAddress("N/A");
+            
+            // Set minimal required city and department (adjust based on your needs)
+            // This might need to be adjusted if these are required differently
+            if (clientDetail.getCity() == null) {
+                City city = new City();
+                city.setCityID(1L); // Default city ID - adjust as needed
+                clientDetail.setCity(city);
+            }
+            if (clientDetail.getDepartment() == null) {
+                Department department = new Department();
+                department.setDepID(1L); // Default department ID - adjust as needed
+                clientDetail.setDepartment(department);
+            }
+
+            User createdUser = userService.createClient(user, clientDetail);
+
+            URI location = ServletUriComponentsBuilder
+                    .fromCurrentRequest()
+                    .path("/{id}")
+                    .buildAndExpand(createdUser.getId())
+                    .toUri();
+            return ResponseEntity.created(location).body(createdUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("error", e.getMessage() != null ? e.getMessage() : "Error al registrar usuario")
+            );
+        }
+    }
+
+    @PutMapping("/plsql/{id}")
+    public ResponseEntity<?> updateUserPLSQL(@PathVariable Long id, @RequestBody User user) {
+        User updatedUser = userService.updateUser(id, user);
+
+        if (updatedUser == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontro ningun usuario con el id: " + id);
+        }
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @DeleteMapping("/plsql/{id}")
+    public ResponseEntity<String> deleteUserPLSQL(@PathVariable Long id) {
+        boolean deleted = userService.deleteUser(id);
+
+        if (!deleted) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontro ningun usuario con el id: " + id);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/adm")

@@ -30,7 +30,7 @@ export class InventoryListComponent implements OnInit {
 
   loadInventory(): void {
     this.loading = true;
-    this.inventoryService.getAvailableInventory().subscribe({
+    this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (items: InventoryItem[]) => {
         this.inventoryItems = items;
         this.loading = false;

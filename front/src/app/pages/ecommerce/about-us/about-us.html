@@ -1,0 +1,74 @@
+<div class="about-us-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <h1 class="main-title">Sobre Nosotros</h1>
+    <div class="title-underline"></div>
+  </div>
+
+  <!-- Group Photo Section -->
+  <div class="group-photo-section">
+    <div class="photo-wrapper">
+      <img [src]="groupPhoto" alt="Equipo TechPads" class="group-photo">
+    </div>
+  </div>
+
+  <!-- Company Description -->
+  <div class="company-description">
+    <div class="description-content">
+      <h2 class="section-title">¿Quiénes Somos?</h2>
+      <p class="description-text">{{ companyDescription }}</p>
+      <div class="company-info">
+        <div class="info-item">
+          <i class="fas fa-map-marker-alt"></i>
+          <span>Carrera 15 #98-27, Bogotá, Colombia</span>
+        </div>
+        <div class="info-item">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Más de 4 años de experiencia</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Section -->
+  <div class="team-section">
+    <h2 class="section-title">Nuestro Equipo</h2>
+    <p class="team-intro">Profesionales apasionados comprometidos con la excelencia tecnológica</p>
+    
+    <div class="team-grid">
+      <div class="team-member" *ngFor="let member of teamMembers">
+        <div class="member-card">
+          <div class="member-image-wrapper">
+            <img [src]="member.image" [alt]="member.name" class="member-image">
+            <div class="member-overlay">
+              <span class="member-role">{{ member.role }}</span>
+            </div>
+          </div>
+          <div class="member-info">
+            <h3 class="member-name">{{ member.name }}</h3>
+            <p class="member-role-text">{{ member.role }}</p>
+            <p class="member-description">{{ member.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mission & Vision Section -->
+  <div class="mission-vision-section">
+    <div class="mv-card">
+      <div class="mv-icon">
+        <i class="fas fa-bullseye"></i>
+      </div>
+      <h3>Nuestra Misión</h3>
+      <p>Acercar la tecnología a todos nuestros clientes de manera fácil, segura y accesible, ofreciendo productos de calidad y un servicio excepcional.</p>
+    </div>
+    <div class="mv-card">
+      <div class="mv-icon">
+        <i class="fas fa-eye"></i>
+      </div>
+      <h3>Nuestra Visión</h3>
+      <p>Ser la empresa líder en distribución de tecnología en Colombia, reconocida por la innovación, confiabilidad y satisfacción de nuestros clientes.</p>
+    </div>
+  </div>
+</div>

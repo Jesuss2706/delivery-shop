@@ -22,6 +22,122 @@ public class InvMovementController {
     @Lazy
     private InvMovementService invMovementService;
 
+    // ============ ENDPOINTS PL/SQL ============
+    
+    @GetMapping("/plsql")
+    public ResponseEntity<List<InvMovementDTO>> getAllMovementsPLSQL() {
+        List<InvMovementDTO> list = invMovementService.findAllDTO();
+        if (list.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/plsql/{id}")
+    public ResponseEntity<?> getMovementByIdPLSQL(@PathVariable Long id) {
+        Optional<InvMovementDTO> movement = invMovementService.findByIdDTO(id);
+        if (movement.isPresent()) {
+            return ResponseEntity.ok(movement.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontró el movimiento con el ID: " + id);
+        }
+    }
+
+    @GetMapping("/plsql/active")
+    public ResponseEntity<List<InvMovementDTO>> getActiveMovementsPLSQL() {
+        List<InvMovementDTO> list = invMovementService.findAllDTO();
+        if (list.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/plsql/inventory/{invCode}")
+    public ResponseEntity<?> getMovementsByInventoryPLSQL(@PathVariable Long invCode) {
+        List<InvMovementDTO> movements = invMovementService.findByInventoryCodeDTO(invCode);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    @GetMapping("/plsql/type/{movType}")
+    public ResponseEntity<?> getMovementsByTypePLSQL(@PathVariable String movType) {
+        List<InvMovementDTO> movements = invMovementService.findByMovTypeDTO(movType);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    @GetMapping("/plsql/order/{ordID}")
+    public ResponseEntity<?> getMovementsByOrderPLSQL(@PathVariable Long ordID) {
+        List<InvMovementDTO> movements = invMovementService.findByOrderIdDTO(ordID);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    @GetMapping("/plsql/date-range")
+    public ResponseEntity<?> getMovementsByDateRangePLSQL(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate) {
+
+        if (startDate == null || endDate == null) {
+            return ResponseEntity.badRequest()
+                    .body("Las fechas de inicio y fin son requeridas");
+        }
+
+        if (startDate.after(endDate)) {
+            return ResponseEntity.badRequest()
+                    .body("La fecha de inicio no puede ser posterior a la fecha fin");
+        }
+
+        List<InvMovementDTO> movements = invMovementService.findByDateRangeDTO(startDate, endDate);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    @GetMapping("/plsql/inventory/{invCode}/type/{movType}")
+    public ResponseEntity<?> getMovementsByInventoryAndTypePLSQL(
+            @PathVariable Long invCode,
+            @PathVariable String movType) {
+        List<InvMovementDTO> movements = invMovementService.findByInventoryCodeAndMovTypeDTO(invCode, movType);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    @GetMapping("/plsql/inventory/{invCode}/date-range")
+    public ResponseEntity<?> getMovementsByInventoryAndDateRangePLSQL(
+            @PathVariable Long invCode,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate) {
+
+        if (startDate == null || endDate == null) {
+            return ResponseEntity.badRequest()
+                    .body("Las fechas de inicio y fin son requeridas");
+        }
+
+        if (startDate.after(endDate)) {
+            return ResponseEntity.badRequest()
+                    .body("La fecha de inicio no puede ser posterior a la fecha fin");
+        }
+
+        List<InvMovementDTO> movements = invMovementService.findByInventoryCodeAndDateRangeDTO(invCode, startDate, endDate);
+        if (movements.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(movements);
+    }
+
+    // ============ ENDPOINTS JPA ============
+
     @GetMapping
     public ResponseEntity<List<InvMovementDTO>> getAllInvMovements() {
         List<InvMovementDTO> list = invMovementService.findAllDTO();

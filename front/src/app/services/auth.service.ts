@@ -204,7 +204,7 @@ export class AuthService {
 
     console.log('Enviando datos al backend:', clientData);
 
-    return this.http.post<User>(`${this.USERS_ENDPOINT}/cli`, clientData).pipe(
+    return this.http.post<User>(`${this.USERS_ENDPOINT}`, clientData).pipe(
       tap((user) => {
         console.log('Usuario registrado exitosamente:', user);
         this.setUser(user);
@@ -272,21 +272,42 @@ export class AuthService {
     }
   }
   getUserId(): number | null {
+    // Primero intentar obtener desde el usuario actual en memoria
     const user = this.getCurrentUser();
     if (user && user.id) {
-      console.log('✅ ID de usuario obtenido:', user.id);
+      console.log('✅ ID de usuario obtenido desde memoria:', user.id);
       return user.id;
     }
 
-    // Fallback: buscar en localStorage directamente
+    // Si no está en memoria, buscar en localStorage
     const userStr = localStorage.getItem(this.USER_KEY);
     if (userStr) {
       try {
         const userData = JSON.parse(userStr);
-        console.log('✅ ID de usuario obtenido desde localStorage:', userData.id);
-        return userData.id || null;
+        if (userData.id) {
+          console.log('✅ ID de usuario obtenido desde localStorage:', userData.id);
+          return userData.id;
+        }
       } catch (error) {
         console.error('❌ Error parseando user data:', error);
+      }
+    }
+
+    // Último recurso: intentar extraer del token
+    const token = this.getToken();
+    if (token) {
+      try {
+        const decoded = this.decodeToken(token);
+        if (decoded.userId) {
+          console.log('✅ ID de usuario obtenido desde token (userId):', decoded.userId);
+          return decoded.userId;
+        }
+        if (decoded.id) {
+          console.log('✅ ID de usuario obtenido desde token (id):', decoded.id);
+          return decoded.id;
+        }
+      } catch (error) {
+        console.error('❌ Error extrayendo ID del token:', error);
       }
     }
 
@@ -310,35 +331,70 @@ export class AuthService {
   // ============================================================
 
   getUserData(username: string): Observable<User> {
-  console.log('🔍 Obteniendo datos del usuario:', username);
-  console.log('🔗 URL:', `${this.USERS_ENDPOINT}/username/${username}`);
-  
-  return this.http.get<User>(`${this.USERS_ENDPOINT}/username/${username}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
-  }).pipe(
-    tap((user) => {
-      console.log('✅ Datos completos del usuario obtenidos:', user);
-      this.setUser(user);
-    }),
-    catchError((error) => {
-      console.error('❌ Error obteniendo datos del usuario:', error);
-      console.error('❌ Error status:', error.status);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error details:', error.error);
-      return throwError(() => error);
-    })
-  );
-}
+    console.log('🔍 Obteniendo datos del usuario:', username);
+    console.log('🔗 URL:', `${this.USERS_ENDPOINT}/plsql/username/${username}`);
+
+    return this.http
+      .get<User>(`${this.USERS_ENDPOINT}/plsql/username/${username}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      })
+      .pipe(
+        tap((user) => {
+          console.log('✅ Datos completos del usuario obtenidos (PL/SQL):', user);
+          this.setUser(user);
+        }),
+        catchError((error) => {
+          console.error('❌ Error obteniendo datos del usuario:', error);
+          console.error('❌ Error status:', error.status);
+          console.error('❌ Error message:', error.message);
+          console.error('❌ Error details:', error.error);
+          return throwError(() => error);
+        })
+      );
+  }
 
   refreshUserData(): Observable<User> {
     const username = this.getUsernameFromToken();
     if (!username) {
       return throwError(() => new Error('No hay usuario autenticado'));
     }
+    console.log('🔄 Recargando datos del usuario desde BD:', username);
     return this.getUserData(username);
+  }
+
+  /**
+   * Recarga los datos del usuario actual por ID (más confiable después de cambiar username)
+   */
+  refreshUserDataById(): Observable<User> {
+    const userId = this.getUserId();
+    if (!userId) {
+      console.error('❌ No hay ID de usuario disponible para refrescar');
+      return throwError(() => new Error('No hay ID de usuario disponible'));
+    }
+    console.log('🔄 Recargando datos del usuario por ID desde BD (PL/SQL):', userId);
+    
+    return this.http
+      .get<User>(`${this.USERS_ENDPOINT}/plsql/${userId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      })
+      .pipe(
+        tap((user) => {
+          console.log('✅ Datos del usuario recargados por ID (PL/SQL):', user);
+          this.setUser(user);
+        }),
+        catchError((error) => {
+          console.error('❌ Error recargando datos del usuario por ID:', error);
+          console.error('❌ Error status:', error.status);
+          console.error('❌ Error details:', error.error);
+          return throwError(() => error);
+        })
+      );
   }
 
   private setUser(user: User): void {
@@ -370,6 +426,30 @@ export class AuthService {
   isLoggedIn(): boolean {
     return this.hasValidToken();
   }
+  // En AuthService - Agrega estos métodos:
+
+  /**
+   * Actualiza el usuario en el servicio y localStorage
+   */
+  updateUserData(updatedUser: User): void {
+    console.log('🔄 Actualizando datos del usuario en AuthService:', updatedUser);
+    this.setUser(updatedUser);
+  }
+
+  /**
+   * Obtiene un observable del usuario actual
+   */
+  getCurrentUserObservable(): Observable<User | null> {
+    return this.currentUserSubject.asObservable();
+  }
+
+  /**
+   * Notifica a los suscriptores que los datos del usuario han cambiado
+   */
+  notifyUserDataChanged(): void {
+    const currentUser = this.getCurrentUser();
+    this.currentUserSubject.next(currentUser);
+  }
 
   // ============================================================
   // =====================  ERRORES  ============================
@@ -381,28 +461,34 @@ export class AuthService {
     if (error.error instanceof ErrorEvent) {
       errorMessage = `Error: ${error.error.message}`;
     } else {
-      switch (error.status) {
-        case 401:
-          errorMessage = 'Usuario o contraseña incorrectos';
-          break;
-        case 403:
-          errorMessage = 'No tienes permiso para realizar esta acción';
-          break;
-        case 404:
-          errorMessage = 'Usuario no encontrado';
-          break;
-        case 409:
-          errorMessage = 'El usuario ya existe';
-          break;
-        case 500:
-          errorMessage = 'Error interno del servidor';
-          break;
-        default:
-          errorMessage = error.error?.message || `Error ${error.status}: ${error.message}`;
+      // Primero intentar obtener el mensaje específico del servidor
+      if (error.error && error.error.error) {
+        errorMessage = error.error.error;
+      } else {
+        switch (error.status) {
+          case 401:
+            errorMessage = 'Contraseña incorrecta';
+            break;
+          case 403:
+            errorMessage = 'No tienes permiso para realizar esta acción';
+            break;
+          case 404:
+            errorMessage = 'Usuario no encontrado';
+            break;
+          case 409:
+            errorMessage = 'El usuario ya existe';
+            break;
+          case 500:
+            errorMessage = 'Error interno del servidor';
+            break;
+          default:
+            errorMessage = error.error?.message || `Error ${error.status}: ${error.message}`;
+        }
       }
     }
 
     console.error('Error en AuthService:', error);
+    console.error('Error message extractado:', errorMessage);
     return throwError(() => new Error(errorMessage));
   }
 }

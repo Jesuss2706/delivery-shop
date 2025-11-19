@@ -155,10 +155,10 @@ public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
                     cartItemDTO.getQuantity()
             );
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body("Producto agregado al carrito exitosamente (PL/SQL)");
+                    .body(Map.of("message", "Producto agregado al carrito exitosamente (PL/SQL)", "success", true));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al agregar al carrito (PL/SQL): " + e.getMessage());
+                    .body(Map.of("message", "Error al agregar al carrito (PL/SQL): " + e.getMessage(), "success", false));
         }
     }
 
@@ -167,15 +167,15 @@ public ResponseEntity<?> getCartByUser(@PathVariable Long userID) {
                                                      @RequestParam Integer quantity) {
         if (quantity <= 0) {
             return ResponseEntity.badRequest()
-                    .body("La cantidad debe ser mayor a 0");
+                    .body(Map.of("message", "La cantidad debe ser mayor a 0", "success", false));
         }
 
         try {
             cartService.actualizarCantidadProcedure(cartID, quantity);
-            return ResponseEntity.ok("Cantidad actualizada correctamente (PL/SQL)");
+            return ResponseEntity.ok(Map.of("message", "Cantidad actualizada correctamente (PL/SQL)", "success", true));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al actualizar cantidad (PL/SQL): " + e.getMessage());
+                    .body(Map.of("message", "Error al actualizar cantidad (PL/SQL): " + e.getMessage(), "success", false));
         }
     }
 
