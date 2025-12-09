@@ -12,6 +12,9 @@ import { InventoryService, InventoryItem } from '../../../../services/inventory.
 })
 export class InventoryListComponent implements OnInit {
   inventoryItems: InventoryItem[] = [];
+  allInventoryItems: InventoryItem[] = [];
+  categories: any[] = [];
+  selectedCategory: number | null = null;
   loading = true;
   showDeleteModal = false;
   itemToDelete: InventoryItem | null = null;
@@ -22,7 +25,7 @@ export class InventoryListComponent implements OnInit {
   constructor(
     private inventoryService: InventoryService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadInventory();
@@ -32,7 +35,9 @@ export class InventoryListComponent implements OnInit {
     this.loading = true;
     this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (items: InventoryItem[]) => {
+        this.allInventoryItems = items;
         this.inventoryItems = items;
+        this.loadCategories();
         this.loading = false;
       },
       error: (err: any) => {
@@ -41,6 +46,34 @@ export class InventoryListComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+  loadCategories(): void {
+    const uniqueCategories = new Map<number, any>();
+    this.allInventoryItems.forEach(item => {
+      if (item.product.productType && !uniqueCategories.has(item.product.productType.typeCode)) {
+        uniqueCategories.set(item.product.productType.typeCode, item.product.productType);
+      }
+    });
+    this.categories = Array.from(uniqueCategories.values());
+  }
+  applyFilter(category: number | null): void {
+    this.selectedCategory = category;
+    if (category === null) {
+      this.inventoryItems = this.allInventoryItems;
+    } else {
+      this.inventoryItems = this.allInventoryItems.filter(item =>
+        item.product.productType?.typeCode === category
+      );
+    }
+  }
+  resetFilters(): void {
+    this.selectedCategory = null;
+    this.inventoryItems = this.allInventoryItems;
+  }
+  onFilterChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    this.applyFilter(value === '' ? null : +value);
   }
 
   editInventoryItem(item: InventoryItem): void {

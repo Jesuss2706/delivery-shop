@@ -4,71 +4,61 @@
 
     <!-- NOMBRE -->
     <label>Nombre</label>
-    <input
-      formControlName="proName"
-      type="text"
-      maxlength="50"
-      placeholder="Ej: iPhone 15 Pro"
-    />
+    <input formControlName="proName" type="text" maxlength="50" placeholder="Ej: iPhone 15 Pro" />
     <div *ngIf="submitted && productForm.controls['proName'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proName'].errors?.['required']">
         El nombre es obligatorio.
       </small>
+      <small *ngIf="productForm.controls['proName'].errors?.['minlength']">
+        Mínimo 2 caracteres.
+      </small>
       <small *ngIf="productForm.controls['proName'].errors?.['maxlength']">
-        Máximo 30 caracteres.
+        Máximo 50 caracteres.
       </small>
       <small *ngIf="productForm.controls['proName'].errors?.['pattern']">
-        El nombre no puede contener solo espacios.
+        Solo letras, números y espacios. No puede empezar con espacio.
       </small>
     </div>
 
     <!-- DESCRIPCIÓN -->
     <label>Descripción</label>
-    <textarea
-      formControlName="descript"
-      maxlength="100"
-      placeholder="Describe el producto..."
-    ></textarea>
+    <textarea formControlName="descript" maxlength="100" placeholder="Describe el producto..."></textarea>
     <div *ngIf="submitted && productForm.controls['descript'].invalid" class="error-message">
       <small *ngIf="productForm.controls['descript'].errors?.['required']">
         La descripción es obligatoria.
       </small>
+      <small *ngIf="productForm.controls['descript'].errors?.['minlength']">
+        Mínimo 5 caracteres.
+      </small>
       <small *ngIf="productForm.controls['descript'].errors?.['maxlength']">
-        Máximo 50 caracteres.
+        Máximo 100 caracteres.
       </small>
       <small *ngIf="productForm.controls['descript'].errors?.['pattern']">
-        Solo se permiten letras, números y espacios.
+        Solo letras, números, espacios y puntuación (.,;:¿?¡!()-). No puede empezar con espacio.
       </small>
     </div>
 
     <!-- MARCA -->
     <label>Marca</label>
-    <input
-      formControlName="proMark"
-      type="text"
-      maxlength="20"
-      placeholder="Ej: Apple"
-    />
+    <input formControlName="proMark" type="text" maxlength="30" placeholder="Ej: Apple" />
     <div *ngIf="submitted && productForm.controls['proMark'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proMark'].errors?.['required']">
         La marca es obligatoria.
       </small>
+      <small *ngIf="productForm.controls['proMark'].errors?.['minlength']">
+        Mínimo 2 caracteres.
+      </small>
       <small *ngIf="productForm.controls['proMark'].errors?.['maxlength']">
-        Máximo 20 caracteres.
+        Máximo 30 caracteres.
       </small>
       <small *ngIf="productForm.controls['proMark'].errors?.['pattern']">
-        Solo se permiten letras y espacios.
+        Solo letras y espacios. No puede empezar con espacio.
       </small>
     </div>
 
     <!-- PRECIO -->
     <label>Precio</label>
-    <input
-      formControlName="proPrice"
-      type="number"
-      (keypress)="onlyNumbers($event)"
-      placeholder="Ej: 5999"
-    />
+    <input formControlName="proPrice" type="number" (keypress)="onlyNumbers($event)" placeholder="Ej: 5999" />
     <div *ngIf="submitted && productForm.controls['proPrice'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proPrice'].errors?.['required']">
         El precio es obligatorio.
@@ -95,17 +85,16 @@
 
     <!-- IMAGEN -->
     <label>URL Imagen</label>
-    <input
-      formControlName="proImg"
-      type="text"
-      placeholder="https://ejemplo.com/imagen"
-    />
+    <input formControlName="proImg" type="text" placeholder="https://ejemplo.com/imagen" maxlength="500" />
     <div *ngIf="submitted && productForm.controls['proImg'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proImg'].errors?.['required']">
         La URL de la imagen es obligatoria.
       </small>
       <small *ngIf="productForm.controls['proImg'].errors?.['pattern']">
         Ingresa una URL válida (http o https).
+      </small>
+      <small *ngIf="productForm.controls['proImg'].errors?.['maxlength']">
+        Máximo 500 caracteres.
       </small>
     </div>
 
@@ -121,17 +110,9 @@
 
 <!-- TOAST -->
 <div *ngIf="showToast" class="toast" [ngClass]="toastType">
-  <img
-    *ngIf="toastType === 'success'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-    alt="Éxito"
-  />
-  <img
-    *ngIf="toastType === 'error'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
-    alt="Error"
-  />
+  <img *ngIf="toastType === 'success'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+    alt="Éxito" />
+  <img *ngIf="toastType === 'error'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+    alt="Error" />
   <p>{{ toastMessage }}</p>
 </div>
