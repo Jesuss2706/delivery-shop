@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { InventoryService, InventoryItem } from '../../../../../services/inventory.service';
@@ -20,7 +20,7 @@ export class ProductDetailComponent implements OnInit {
   quantity: number = 1;
   selectedImage: string = '';
   addingToCart: boolean = false;
-  
+
   // Sistema de Toast local
   toast = {
     show: false,
@@ -34,11 +34,11 @@ export class ProductDetailComponent implements OnInit {
     private inventoryService: InventoryService,
     private cartService: CartService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const productId = this.route.snapshot.paramMap.get('id');
-   
+
     if (productId) {
       this.loadProductDetail(+productId);
     } else {
@@ -52,7 +52,7 @@ export class ProductDetailComponent implements OnInit {
       next: (data: InventoryItem) => {
         this.product = data;
         this.selectedImage = data.product?.proImg || 'assets/placeholder-product.jpg';
-       
+
         this.publicProductData = {
           nombre: data.product?.proName || 'Producto sin nombre',
           descripcion: data.product?.descript || 'Sin descripción disponible',
@@ -105,7 +105,7 @@ export class ProductDetailComponent implements OnInit {
     }
 
     const currentUserId = this.authService.getUserId();
-    
+
     if (!currentUserId) {
       console.error('❌ No se pudo obtener el ID del usuario');
       this.showToast('Error: Usuario no identificado', 'error');
@@ -114,7 +114,7 @@ export class ProductDetailComponent implements OnInit {
 
     // VALIDAR STOCK DISPONIBLE
     const stockDisponible = this.product.invStock || 0;
-    
+
     if (stockDisponible <= 0) {
       this.showToast('Producto sin stock disponible', 'warning');
       return;
@@ -136,25 +136,52 @@ export class ProductDetailComponent implements OnInit {
 
     console.log('🛒 Agregando al carrito:', cartItem);
 
-    this.cartService.addToCart(cartItem).subscribe({
+    // Usar addToCartPLSQL en lugar de addToCart para consistencia
+    this.cartService.addToCartPLSQL(cartItem).subscribe({
       next: (response) => {
         console.log('✅ Producto agregado al carrito:', response);
         this.showToast(
-          `¡${this.quantity} ${this.quantity === 1 ? 'unidad' : 'unidades'} de ${this.publicProductData.nombre} agregada(s) al carrito!`, 
+          `¡${this.quantity} ${this.quantity === 1 ? 'unidad' : 'unidades'} de ${this.publicProductData.nombre} agregada(s) al carrito!`,
           'success'
         );
         this.addingToCart = false;
       },
       error: (error) => {
         console.error('❌ Error al agregar producto al carrito:', error);
-        
-        // Manejar diferentes tipos de errores
-        if (error.status === 400 && error.error?.message?.includes('stock')) {
-          this.showToast('No hay suficiente stock disponible', 'warning');
+
+        // Intentar extraer el mensaje de error de varias fuentes posibles
+        let errorMessage = '';
+
+        if (error.error && typeof error.error === 'object' && error.error.message) {
+          errorMessage = error.error.message;
+        } else if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        const errorMsgLower = errorMessage.toLowerCase();
+
+        // Verificar palabras clave relacionadas con stock/inventario
+        if (errorMessage && (
+          errorMsgLower.includes('stock') ||
+          errorMsgLower.includes('inventario') ||
+          errorMsgLower.includes('máximo') ||
+          errorMsgLower.includes('cantidad') ||
+          errorMsgLower.includes('disponible') ||
+          errorMsgLower.includes('suficiente')
+        )) {
+          this.showToast(
+            `No puedes agregar ${this.quantity} unidad(es). Ya tienes el máximo disponible en tu carrito o no hay suficiente stock.`,
+            'warning'
+          );
+        } else if (errorMessage) {
+          const cleanMessage = errorMessage.replace('Error al agregar al carrito (PL/SQL):', '').trim();
+          this.showToast(cleanMessage || errorMessage, 'error');
         } else {
           this.showToast('Error al agregar producto al carrito', 'error');
         }
-        
+
         this.addingToCart = false;
       }
     });
@@ -173,7 +200,7 @@ export class ProductDetailComponent implements OnInit {
     }
 
     const currentUserId = this.authService.getUserId();
-    
+
     if (!currentUserId) {
       this.showToast('Error: Usuario no identificado', 'error');
       return;
@@ -181,7 +208,7 @@ export class ProductDetailComponent implements OnInit {
 
     // VALIDAR STOCK DISPONIBLE
     const stockDisponible = this.product.invStock || 0;
-    
+
     if (stockDisponible <= 0) {
       this.showToast('Producto sin stock disponible', 'warning');
       return;
@@ -203,13 +230,13 @@ export class ProductDetailComponent implements OnInit {
 
     console.log('🛒 Comprar ahora - Agregando al carrito:', cartItem);
 
-    // Agregar al carrito y luego redirigir
-    this.cartService.addToCart(cartItem).subscribe({
+    // Agregar al carrito y luego redirigir - Usando PLSQL
+    this.cartService.addToCartPLSQL(cartItem).subscribe({
       next: (response) => {
         console.log('✅ Producto agregado, redirigiendo al carrito...');
         this.showToast('Producto agregado, redirigiendo al carrito...', 'success');
         this.addingToCart = false;
-        
+
         // Redirigir al carrito después de un breve delay para que el usuario vea el toast
         setTimeout(() => {
           this.router.navigate(['/store/cart']);
@@ -217,13 +244,40 @@ export class ProductDetailComponent implements OnInit {
       },
       error: (error) => {
         console.error('❌ Error al agregar producto:', error);
-        
-        if (error.status === 400 && error.error?.message?.includes('stock')) {
-          this.showToast('No hay suficiente stock disponible', 'warning');
+
+        // Intentar extraer el mensaje de error de varias fuentes posibles
+        let errorMessage = '';
+
+        if (error.error && typeof error.error === 'object' && error.error.message) {
+          errorMessage = error.error.message;
+        } else if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        const errorMsgLower = errorMessage.toLowerCase();
+
+        // Verificar palabras clave relacionadas con stock/inventario
+        if (errorMessage && (
+          errorMsgLower.includes('stock') ||
+          errorMsgLower.includes('inventario') ||
+          errorMsgLower.includes('máximo') ||
+          errorMsgLower.includes('cantidad') ||
+          errorMsgLower.includes('disponible') ||
+          errorMsgLower.includes('suficiente')
+        )) {
+          this.showToast(
+            `No puedes agregar ${this.quantity} unidad(es). Ya tienes el máximo disponible en tu carrito o no hay suficiente stock.`,
+            'warning'
+          );
+        } else if (errorMessage) {
+          const cleanMessage = errorMessage.replace('Error al agregar al carrito (PL/SQL):', '').trim();
+          this.showToast(cleanMessage || errorMessage, 'error');
         } else {
           this.showToast('Error al procesar la compra', 'error');
         }
-        
+
         this.addingToCart = false;
       }
     });

@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { InventoryService, InventoryItem } from '../../../../services/inventory.service';
 import { ProviderService, Provider } from '../../../../services/provider.service';
@@ -32,6 +32,26 @@ export class EditInventoryComponent implements OnInit {
     private providerService: ProviderService
   ) {}
 
+  // Validador personalizado para fecha (no mayor a 1 año)
+  private dateNotOlderThanOneYear(): (control: AbstractControl) => ValidationErrors | null {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control.value) {
+        return null;
+      }
+
+      const inputDate = new Date(control.value);
+      const today = new Date();
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+      if (inputDate < oneYearAgo) {
+        return { dateOlderThanOneYear: true };
+      }
+
+      return null;
+    };
+  }
+
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
@@ -60,7 +80,13 @@ export class EditInventoryComponent implements OnInit {
           Validators.max(20000000)
         ]
       ],
-      invDate: ['', Validators.required],
+      invDate: [
+        '',
+        [
+          Validators.required,
+          this.dateNotOlderThanOneYear()
+        ]
+      ],
       provId: [{ value: '', disabled: true }],
       provName: [
         '',

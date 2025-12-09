@@ -7,7 +7,7 @@
     <input
       formControlName="proName"
       type="text"
-      maxlength="30"
+      maxlength="50"
       placeholder="Ej: iPhone 15 Pro"
     />
     <div *ngIf="submitted && productForm.controls['proName'].invalid" class="error-message">
@@ -26,7 +26,7 @@
     <label>Descripción</label>
     <textarea
       formControlName="descript"
-      maxlength="50"
+      maxlength="100"
       placeholder="Describe el producto..."
     ></textarea>
     <div *ngIf="submitted && productForm.controls['descript'].invalid" class="error-message">

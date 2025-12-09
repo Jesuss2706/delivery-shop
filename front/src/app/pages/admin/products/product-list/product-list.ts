@@ -12,6 +12,9 @@ import { ProductService, Product } from '../../../../services/product.service';
 })
 export class ProductListComponent implements OnInit {
   products: Product[] = [];
+  allProducts: Product[] = [];
+  categories: any[] = [];
+  selectedCategory: number | null = null;
   loading = true;
   showDeleteModal = false;
   productToDelete: Product | null = null;
@@ -32,7 +35,9 @@ export class ProductListComponent implements OnInit {
     this.loading = true;
     this.productService.getProducts().subscribe({
       next: (products: Product[]) => {
+        this.allProducts = products;
         this.products = products;
+        this.loadCategories();
         this.loading = false;
       },
       error: (err: any) => {
@@ -41,6 +46,38 @@ export class ProductListComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  loadCategories(): void {
+    const uniqueCategories = new Map<number, any>();
+    this.allProducts.forEach(product => {
+      if (product.productType && !uniqueCategories.has(product.productType.typeCode)) {
+        uniqueCategories.set(product.productType.typeCode, product.productType);
+      }
+    });
+    this.categories = Array.from(uniqueCategories.values());
+  }
+
+  applyFilter(category: number | null): void {
+    this.selectedCategory = category;
+    if (category === null) {
+      this.products = this.allProducts;
+    } else {
+      this.products = this.allProducts.filter(product => 
+        product.productType?.typeCode === category
+      );
+    }
+  }
+
+  resetFilters(): void {
+    this.selectedCategory = null;
+    this.products = this.allProducts;
+  }
+
+  onFilterChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    const value = target.value;
+    this.applyFilter(value === '' ? null : +value);
   }
 
   editProduct(product: Product): void {

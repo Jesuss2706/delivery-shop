@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { CheckoutService, CheckoutRequest, CheckoutResponse, OrderDetailDTO } from '../../../services/checkout.service';
 import { CartService, CartResponse } from '../../../services/cart.service';
 import { AuthService } from '../../../services/auth.service';
+import { InventoryService, InventoryItem } from '../../../services/inventory.service';
 
 interface User {
   id: number;
@@ -87,6 +88,7 @@ export class CheckoutComponent implements OnInit {
     private checkoutService: CheckoutService,
     private cartService: CartService,
     private authService: AuthService,
+    private inventoryService: InventoryService,
     private router: Router,
     private route: ActivatedRoute
   ) {}
@@ -156,15 +158,44 @@ export class CheckoutComponent implements OnInit {
     this.loading = true;
     this.cartService.getCartByUser(this.userID).subscribe({
       next: (response: CartResponse) => {
-        this.cartItems = response.items || [];
-        this.totalAmount = response.total;
-        this.itemCount = response.itemCount;
-        this.loading = false;
+        // Cargar el inventario para obtener los precios de venta
+        this.inventoryService.getAvailableInventoryPLSQL().subscribe({
+          next: (inventory: InventoryItem[]) => {
+            // Mapear los items del carrito con su precio de venta
+            this.cartItems = (response.items || []).map(cartItem => {
+              const inventoryItem = inventory.find(
+                inv => inv.product.proCode === cartItem.proCode.proCode
+              );
+              
+              return {
+                ...cartItem,
+                sellingPrice: inventoryItem?.sellingPrice || cartItem.proCode.proPrice
+              };
+            });
+            
+            // Recalcular el total con los precios de venta correctos
+            this.recalculateCheckoutTotal();
+            this.itemCount = response.itemCount;
+            this.loading = false;
 
-        if (this.cartItems.length === 0) {
-          this.showToast('El carrito está vacío', 'warning');
-          this.router.navigate(['/cart']);
-        }
+            if (this.cartItems.length === 0) {
+              this.showToast('El carrito está vacío', 'warning');
+              this.router.navigate(['/cart']);
+            }
+          },
+          error: (err) => {
+            console.error('Error cargando inventario:', err);
+            // Fallback: usar proPrice si no se puede cargar el inventario
+            this.cartItems = (response.items || []).map(item => ({
+              ...item,
+              sellingPrice: item.proCode.proPrice
+            }));
+            // Recalcular el total con los precios
+            this.recalculateCheckoutTotal();
+            this.itemCount = response.itemCount;
+            this.loading = false;
+          }
+        });
       },
       error: (err) => {
         console.error('Error cargando carrito:', err);
@@ -172,6 +203,14 @@ export class CheckoutComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  // Recalcular el total del checkout basado en sellingPrice
+  recalculateCheckoutTotal(): void {
+    this.totalAmount = this.cartItems.reduce((total, item) => {
+      const price = item.sellingPrice ?? item.proCode.proPrice;
+      return total + (price * item.quantity);
+    }, 0);
   }
 
   processCheckout(): void {
@@ -203,6 +242,8 @@ export class CheckoutComponent implements OnInit {
     this.checkoutService.processCheckout(checkoutRequest).subscribe({
       next: (response: CheckoutResponse) => {
         this.temporaryInvoice = response;
+        // Actualizar el totalBill con el total recalculado en base a sellingPrice
+        this.temporaryInvoice.totalBill = this.totalAmount;
         this.showInvoice = true;
         this.checkoutProcessing = false;
         

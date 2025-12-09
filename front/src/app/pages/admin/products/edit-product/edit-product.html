@@ -43,7 +43,7 @@
       formControlName="descript"
       placeholder="Describe el producto..."
       rows="4"
-      maxlength="200"
+      maxlength="100"
     ></textarea>
     <div *ngIf="submitted && productForm.controls['descript'].invalid" class="error-message">
       <small *ngIf="productForm.controls['descript'].errors?.['required']">La descripción es obligatoria.</small>

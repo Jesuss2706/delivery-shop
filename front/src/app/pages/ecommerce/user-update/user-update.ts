@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -19,10 +19,11 @@ import { Router } from '@angular/router';
   templateUrl: './user-update.html',
   styleUrls: ['./user-update.css'],
 })
-export class UserUpdate implements OnInit {
+export class UserUpdate implements OnInit, OnDestroy {
   showToast = false;
   toastMessage = '';
   toastType: 'success' | 'error' = 'success';
+  private toastTimeout: any = null;
   
   // Formulario principal
   userForm = {
@@ -662,12 +663,18 @@ export class UserUpdate implements OnInit {
   }
 
   showToastMessage(message: string, type: 'success' | 'error'): void {
+    // Limpiar el timeout anterior si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
     this.toastMessage = message;
     this.toastType = type;
     this.showToast = true;
 
-    setTimeout(() => {
+    this.toastTimeout = setTimeout(() => {
       this.showToast = false;
+      this.toastTimeout = null;
     }, 3000);
   }
 
@@ -727,5 +734,12 @@ export class UserUpdate implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/store']);
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar el timeout del toast si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
   }
 }

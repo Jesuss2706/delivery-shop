@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { InventoryService, InventoryItem } from '../../../services/inventory.service';
 import { CartService, CartItemDTO } from '../../../services/cart.service';
@@ -20,6 +20,10 @@ export class StoreComponent implements OnInit, OnDestroy {
   private inventoryLoaded = false;
   private pendingFilter: number | null = null;
 
+  // Variables de estado
+  loading: boolean = false;
+  selectedTypeId: number | null = null;
+
   // Variables para feedback - AHORA CON TOAST
   loadingAddToCart: { [key: number]: boolean } = {};
   toast = {
@@ -27,26 +31,27 @@ export class StoreComponent implements OnInit, OnDestroy {
     message: '',
     type: 'success' as 'success' | 'error' | 'warning'
   };
+  private toastTimeout: any = null;
 
   // Variables para control de roles
   isAdmin: boolean = false;
   currentUser: any = null;
 
   constructor(
-    private inventoryService: InventoryService, 
+    private inventoryService: InventoryService,
     private router: Router,
     private cartService: CartService,
-    public authService: AuthService 
-  ) {}
+    public authService: AuthService
+  ) { }
 
   ngOnInit(): void {
     this.loadUserRole(); // Cargar el rol del usuario
     this.loadInventory();
-    
+
     this.filterSubscription = this.inventoryService.typeCodeFilter$.subscribe(
       (typeCode: number | null) => {
         console.log('🔄 StoreComponent recibió filtro:', typeCode);
-        
+
         if (this.inventoryLoaded) {
           this.applyFilter(typeCode);
         } else {
@@ -60,6 +65,11 @@ export class StoreComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     console.log('🗑️ StoreComponent destruido');
     this.filterSubscription?.unsubscribe();
+
+    // Limpiar el timeout del toast si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
   }
 
   loadUserRole(): void {
@@ -70,18 +80,20 @@ export class StoreComponent implements OnInit, OnDestroy {
       this.isAdmin = this.currentUser?.role === 'ADMIN';
     }
 
-    
+
     console.log('👤 Usuario es ADMIN:', this.isAdmin);
   }
 
   loadInventory(): void {
     console.log('📦 Cargando inventario...');
+    this.loading = true;
     this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (data: InventoryItem[]) => {
         console.log('✅ Inventario cargado:', data.length, 'items');
         this.inventoryItems = data;
         this.filteredItems = data;
         this.inventoryLoaded = true;
+        this.loading = false;
 
         if (this.pendingFilter !== null) {
           console.log('🎯 Aplicando filtro pendiente:', this.pendingFilter);
@@ -93,6 +105,7 @@ export class StoreComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         console.error('❌ Error cargando inventario', err);
+        this.loading = false;
         this.showToast('Error al cargar los productos', 'error');
       },
     });
@@ -101,6 +114,8 @@ export class StoreComponent implements OnInit, OnDestroy {
   applyFilter(typeCode: number | null): void {
     console.log('🎯 Aplicando filtro:', typeCode);
     console.log('📊 Total items disponibles:', this.inventoryItems.length);
+
+    this.selectedTypeId = typeCode;
 
     if (typeCode === null) {
       this.filteredItems = this.inventoryItems;
@@ -171,19 +186,51 @@ export class StoreComponent implements OnInit, OnDestroy {
     this.cartService.addToCartPLSQL(cartItemDTO).subscribe({
       next: (cartResponse) => {
         console.log('✅ Producto agregado al carrito:', cartResponse);
-        this.showToast(cartResponse.message || `¡${item.product.proName} agregado al carrito! 🛒`, 'success');
+        this.showToast(
+          `¡1 unidad de ${item.product.proName} agregada al carrito!`,
+          'success'
+        );
         this.loadingAddToCart[item.invCode!] = false;
       },
       error: (error) => {
         console.error('❌ Error agregando al carrito:', error);
-        
-        // Manejar error de stock insuficiente
-        if (error.status === 400 && error.error?.message?.includes('stock')) {
-          this.showToast('No hay suficiente stock disponible', 'warning');
+
+        // Intentar extraer el mensaje de error de varias fuentes posibles
+        let errorMessage = '';
+
+        if (error.error && typeof error.error === 'object' && error.error.message) {
+          errorMessage = error.error.message;
+        } else if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        const errorMsgLower = errorMessage.toLowerCase();
+
+        // Verificar palabras clave relacionadas con stock/inventario
+        if (errorMessage && (
+          errorMsgLower.includes('stock') ||
+          errorMsgLower.includes('inventario') ||
+          errorMsgLower.includes('máximo') ||
+          errorMsgLower.includes('cantidad') ||
+          errorMsgLower.includes('disponible') ||
+          errorMsgLower.includes('suficiente')
+        )) {
+          this.showToast(
+            `No puedes agregar más unidades de "${item.product.proName}". Ya tienes el máximo disponible en tu carrito.`,
+            'warning'
+          );
+        } else if (errorMessage) {
+          // Si hay un mensaje pero no es de stock, mostrarlo tal cual
+          // Limpiamos un poco el mensaje si viene con prefijos técnicos
+          const cleanMessage = errorMessage.replace('Error al agregar al carrito (PL/SQL):', '').trim();
+          this.showToast(cleanMessage || errorMessage, 'error');
         } else {
+          // Solo si no pudimos extraer NINGÚN mensaje
           this.showToast('Error al agregar el producto al carrito', 'error');
         }
-        
+
         this.loadingAddToCart[item.invCode!] = false;
       }
     });
@@ -191,16 +238,22 @@ export class StoreComponent implements OnInit, OnDestroy {
 
   // Método para mostrar toast
   showToast(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    // Limpiar el timeout anterior si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
     this.toast = {
       show: true,
       message,
       type
     };
 
-    // Ocultar automáticamente después de 5 segundos
-    setTimeout(() => {
+    // Ocultar automáticamente después de 3 segundos
+    this.toastTimeout = setTimeout(() => {
       this.toast.show = false;
-    }, 5000);
+      this.toastTimeout = null;
+    }, 3000);
   }
 
   // Método para cerrar manualmente el toast
@@ -216,5 +269,13 @@ export class StoreComponent implements OnInit, OnDestroy {
   // Método helper para verificar si es cliente (opcional)
   isClient(): boolean {
     return !this.isAdmin && this.authService.isLoggedIn();
+  }
+
+  // Método para resetear filtros
+  resetFilters(): void {
+    console.log('🔄 Reseteando filtros');
+    this.selectedTypeId = null;
+    this.filteredItems = this.inventoryItems;
+    this.inventoryService.filterByTypeCode(null);
   }
 }

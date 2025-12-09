@@ -1,4 +1,4 @@
-<div class="cart-container">
+﻿<div class="cart-container">
   <!-- Header -->
   <div class="cart-header">
     <button class="back-btn" (click)="goBack()">
@@ -17,26 +17,8 @@
     </button>
   </div>
 
-  <!-- Toast Notification -->
-  <div *ngIf="toast.show" 
-       class="toast-notification toast-{{toast.type}}"
-       [class.show]="toast.show"
-       (click)="closeToast()">
-    <div class="toast-icon">
-      <span *ngIf="toast.type === 'success'">✅</span>
-      <span *ngIf="toast.type === 'error'">❌</span>
-      <span *ngIf="toast.type === 'warning'">⚠️</span>
-    </div>
-    <div class="toast-content">
-      <p class="toast-message">{{ toast.message }}</p>
-    </div>
-    <button class="toast-close" (click)="closeToast()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-  </div>
+  <!-- Toast Notification - DESACTIVADO para evitar conflicto con el toast del store -->
+
 
   <!-- Modal de Confirmación -->
   <div *ngIf="modal.show" class="modal-overlay" (click)="closeModal()">
@@ -101,7 +83,7 @@
         <div class="item-details">
           <h3 class="item-name">{{ item.proCode.proName }}</h3>
           <p class="item-brand">{{ item.proCode.proMark }}</p>
-          <p class="item-price">{{ formatPrice(item.proCode.proPrice) }}</p>
+          <p class="item-price">{{ formatPrice(item.sellingPrice ?? item.proCode.proPrice) }}</p>
         </div>
 
         <div class="item-actions">
@@ -127,7 +109,7 @@
           </div>
 
           <p class="item-subtotal">
-            {{ formatPrice(item.proCode.proPrice * item.quantity) }}
+            {{ formatPrice((item.sellingPrice ?? item.proCode.proPrice) * item.quantity) }}
           </p>
 
           <button 
