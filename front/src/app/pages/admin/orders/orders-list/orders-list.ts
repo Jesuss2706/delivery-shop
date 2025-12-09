@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CheckoutService, OrderSummaryDTO, OrderDetailDTO } from '../../../../services/checkout.service';
 import { AuthService } from '../../../../services/auth.service';
+import { InventoryService, InventoryItem } from '../../../../services/inventory.service';
 
 @Component({
   selector: 'app-orders-list',
@@ -16,28 +17,28 @@ export class OrdersListComponent implements OnInit {
   // Estados del componente
   loading: boolean = false;
   loadingDetails: boolean = false;
-  
+
   // Datos de órdenes
   allOrders: OrderSummaryDTO[] = [];
   filteredOrders: OrderSummaryDTO[] = [];
   selectedOrder: OrderDetailDTO | null = null;
-  
+
   // Filtros y paginación
   filterStatus: string = 'all';
   searchTerm: string = '';
   currentPage: number = 1;
   itemsPerPage: number = 10;
   totalOrders: number = 0;
-  
+
   // Estados disponibles para actualización
   availableStates: string[] = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
-  
+
   // Modal y selección
   showOrderDetail: boolean = false;
   orderToUpdate: number | null = null;
   newOrderState: string = '';
   updatingOrder: boolean = false;
-  
+
   // Sistema de Toast
   toast = {
     show: false,
@@ -48,8 +49,9 @@ export class OrdersListComponent implements OnInit {
   constructor(
     private checkoutService: CheckoutService,
     private authService: AuthService,
+    private inventoryService: InventoryService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     if (!this.authService.isAdmin()) {
@@ -61,14 +63,71 @@ export class OrdersListComponent implements OnInit {
 
   loadAllOrders(): void {
     this.loading = true;
-    
+
     this.checkoutService.getAllOrders().subscribe({
       next: (orders: OrderSummaryDTO[]) => {
-        this.allOrders = orders;
-        this.filteredOrders = orders;
-        this.totalOrders = orders.length;
-        this.loading = false;
-        console.log('✅ Órdenes cargadas:', orders.length);
+        // Cargar inventario para recalcular totales
+        this.inventoryService.getAvailableInventoryPLSQL().subscribe({
+          next: (inventory: InventoryItem[]) => {
+            this.allOrders = orders;
+
+            // Cargar detalles de todas las órdenes para recalcular totales
+            const detailRequests = orders.map(order =>
+              new Promise<void>((resolve) => {
+                this.checkoutService.getOrderDetail(order.ordID).subscribe({
+                  next: (orderDetail: OrderDetailDTO) => {
+                    // Recalcular el total basado en inventario
+                    if (orderDetail.items) {
+                      let newTotal = 0;
+                      orderDetail.items.forEach(item => {
+                        const inventoryItem = inventory.find(
+                          inv => inv.product.proCode === item.proCode
+                        );
+                        if (inventoryItem) {
+                          const unitPrice = Number(inventoryItem.sellingPrice);
+                          const subtotal = unitPrice * (item.quantity || 1);
+                          newTotal += subtotal;
+                        } else {
+                          newTotal += item.subtotal || 0;
+                        }
+                      });
+
+                      // Actualizar el total en la orden
+                      const orderToUpdate = this.allOrders.find(o => o.ordID === order.ordID);
+                      if (orderToUpdate) {
+                        orderToUpdate.total = newTotal;
+                      }
+                    }
+                    resolve();
+                  },
+                  error: () => {
+                    // Si falla, dejar el total del backend
+                    resolve();
+                  }
+                });
+              })
+            );
+
+            // Esperar a que todos se carguen
+            Promise.all(detailRequests).then(() => {
+              this.filteredOrders = this.allOrders;
+              this.totalOrders = this.allOrders.length;
+              this.applyFilters();
+              this.loading = false;
+              console.log('✅ Órdenes cargadas:', this.allOrders.length);
+            });
+          },
+          error: (err) => {
+            console.error('Error cargando inventario:', err);
+            // Si falla inventario, usar los totales del backend
+            this.allOrders = orders;
+            this.filteredOrders = orders;
+            this.totalOrders = orders.length;
+            this.applyFilters();
+            this.loading = false;
+            console.log('✅ Órdenes cargadas (sin recalcular):', orders.length);
+          }
+        });
       },
       error: (err) => {
         console.error('❌ Error cargando órdenes:', err);
@@ -84,7 +143,7 @@ export class OrdersListComponent implements OnInit {
 
     // Filtrar por estado
     if (this.filterStatus !== 'all') {
-      filtered = filtered.filter(order => 
+      filtered = filtered.filter(order =>
         order.ordState.toLowerCase() === this.filterStatus.toLowerCase()
       );
     }
@@ -92,7 +151,7 @@ export class OrdersListComponent implements OnInit {
     // Filtrar por término de búsqueda
     if (this.searchTerm) {
       const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(order => 
+      filtered = filtered.filter(order =>
         order.ordID.toString().includes(term) ||
         order.paymentType.toLowerCase().includes(term) ||
         this.formatPrice(order.total).toLowerCase().includes(term)
@@ -120,11 +179,14 @@ export class OrdersListComponent implements OnInit {
     }
   }
 
-  
-openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
-  this.orderToUpdate = order.ordID;
-  this.newOrderState = order.ordState;
-}
+  openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
+    // Si el modal de detalles está abierto, cerrarlo primero
+    if (this.showOrderDetail) {
+      this.closeOrderDetail();
+    }
+    this.orderToUpdate = order.ordID;
+    this.newOrderState = order.ordState;
+  }
 
   closeStatusModal(): void {
     this.orderToUpdate = null;
@@ -140,27 +202,27 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
     this.checkoutService.updateOrderStatus(this.orderToUpdate, this.newOrderState).subscribe({
       next: () => {
         this.showToast('Estado de orden actualizado exitosamente', 'success');
-        
+
         // Actualizar la orden localmente
         const orderIndex = this.allOrders.findIndex(o => o.ordID === this.orderToUpdate);
         if (orderIndex !== -1) {
           this.allOrders[orderIndex].ordState = this.newOrderState;
         }
-        
+
         // Si la orden seleccionada está abierta, actualizarla también
         if (this.selectedOrder && this.selectedOrder.ordID === this.orderToUpdate) {
           this.selectedOrder.ordState = this.newOrderState;
         }
-        
+
         this.applyFilters(); // Re-aplicar filtros
         this.closeStatusModal();
       },
       error: (err) => {
         console.error('❌ Error actualizando estado:', err);
-        
+
         // Manejar diferentes tipos de errores
         let errorMessage = 'Error al actualizar el estado de la orden';
-        
+
         if (err.error?.errors?.state) {
           errorMessage = err.error.errors.state;
         } else if (err.error?.message) {
@@ -168,7 +230,7 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
         } else if (err.message) {
           errorMessage = err.message;
         }
-        
+
         this.showToast(errorMessage, 'error');
         this.updatingOrder = false;
       }
@@ -182,8 +244,45 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
 
     this.checkoutService.getOrderDetail(ordID).subscribe({
       next: (orderDetail: OrderDetailDTO) => {
-        this.selectedOrder = orderDetail;
-        this.loadingDetails = false;
+        // Cargar inventario para enriquecer con precios de venta
+        this.inventoryService.getAvailableInventoryPLSQL().subscribe({
+          next: (inventory: InventoryItem[]) => {
+            // Recalcular el total basado en inventario
+            if (orderDetail.items) {
+              let newTotal = 0;
+              orderDetail.items = orderDetail.items.map(item => {
+                const inventoryItem = inventory.find(
+                  inv => inv.product.proCode === item.proCode
+                );
+
+                if (inventoryItem) {
+                  item.unitPrice = Number(inventoryItem.sellingPrice);
+                  item.subtotal = item.unitPrice * (item.quantity || 1);
+                }
+
+                newTotal += item.subtotal || 0;
+                return item;
+              });
+
+              orderDetail.total = newTotal;
+
+              // Actualizar también en el listado
+              const orderInList = this.allOrders.find(o => o.ordID === ordID);
+              if (orderInList) {
+                orderInList.total = newTotal;
+              }
+            }
+
+            this.selectedOrder = orderDetail;
+            this.loadingDetails = false;
+          },
+          error: (err) => {
+            console.error('Error cargando inventario:', err);
+            // Si falla, usar los datos del backend
+            this.selectedOrder = orderDetail;
+            this.loadingDetails = false;
+          }
+        });
       },
       error: (err) => {
         console.error('❌ Error cargando detalle de orden:', err);
@@ -210,13 +309,13 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
   }
 
   formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-CO', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-}
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
   getOrderStatusText(status: string): string {
     const statuses: { [key: string]: string } = {
@@ -246,10 +345,10 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
       'Pending': ['Processing', 'Cancelled'],
       'Processing': ['Shipped', 'Cancelled'],
       'Shipped': ['Delivered'],
-      'Delivered': [], 
-      'Cancelled': [] 
+      'Delivered': [],
+      'Cancelled': []
     };
-    
+
     return allowedTransitions[currentState]?.includes(newState) || false;
   }
 
@@ -263,7 +362,7 @@ openStatusModal(order: OrderSummaryDTO | OrderDetailDTO): void {
 
     setTimeout(() => {
       this.toast.show = false;
-    }, 5000);
+    }, 3000);
   }
 
   closeToast(): void {

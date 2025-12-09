@@ -22,13 +22,55 @@
     </div>
   </div>
 
+  <!-- Category Filter Section -->
+  <div class="filter-section" *ngIf="categories.length > 0">
+    <div class="filter-container">
+      <label for="category-filter" class="filter-label">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293-.707L3.293 7.293A1 1 0 0 1 3 6.586V4z"></path>
+        </svg>
+        Filtrar por categoría:
+      </label>
+      <select 
+        id="category-filter"
+        class="filter-select"
+        [value]="selectedCategory || ''"
+        (change)="onFilterChange($event)">
+        <option value="">Todas las categorías</option>
+        <option *ngFor="let category of categories" [value]="category.typeCode">
+          {{ category.typeName }}
+        </option>
+      </select>
+      <button 
+        class="btn-reset-filter" 
+        *ngIf="selectedCategory"
+        (click)="resetFilters()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 4v6h6M23 20v-6h-6"></path>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64M3.51 15A9 9 0 0 0 18.36 18.36"></path>
+        </svg>
+        Limpiar filtro
+      </button>
+    </div>
+    <div class="filter-info" *ngIf="selectedCategory">
+      <p>Mostrando {{ products.length }} productos en esta categoría</p>
+    </div>
+  </div>
+
   <!-- Empty State -->
   <div class="empty-state" *ngIf="products.length === 0">
     <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M20 13V7a2 2 0 0 0-2-2h-3V3H9v2H6a2 2 0 0 0-2 2v6H1v8h22v-8z"></path>
     </svg>
     <h3>No hay productos disponibles</h3>
-    <p>Aún no has creado ningún producto</p>
+    <p *ngIf="!selectedCategory">Aún no has creado ningún producto</p>
+    <p *ngIf="selectedCategory">No hay productos en esta categoría</p>
+    <button 
+      *ngIf="selectedCategory"
+      class="btn-reset-empty" 
+      (click)="resetFilters()">
+      Limpiar filtro
+    </button>
   </div>
 
   <!-- Products Grid -->

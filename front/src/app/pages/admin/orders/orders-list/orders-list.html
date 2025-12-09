@@ -1,10 +1,9 @@
 <div class="admin-orders-container">
   <!-- Toast Notification -->
-  <div *ngIf="toast.show" class="toast toast-{{toast.type}}">
-    <div class="toast-content">
-      <span class="toast-message">{{ toast.message }}</span>
-      <button (click)="closeToast()" class="toast-close">×</button>
-    </div>
+  <!-- Toast Notification -->
+  <div *ngIf="toast.show" class="toast-notification {{toast.type}}">
+    <p>{{ toast.message }}</p>
+    <button (click)="closeToast()" class="toast-close">×</button>
   </div>
 
   <!-- Modal de Actualización de Estado -->
@@ -14,7 +13,7 @@
         <h3>Actualizar Estado de Orden #{{ orderToUpdate }}</h3>
         <button (click)="closeStatusModal()" class="modal-close">×</button>
       </div>
-      
+
       <div class="modal-body">
         <div class="warning-message">
           <div class="warning-icon">⚠️</div>
@@ -24,19 +23,15 @@
 
         <div class="form-group">
           <label for="orderState" class="form-label">Nuevo Estado</label>
-          <select 
-            id="orderState"
-            [(ngModel)]="newOrderState" 
-            class="state-select"
-            [disabled]="updatingOrder">
+          <select id="orderState" [(ngModel)]="newOrderState" class="state-select" [disabled]="updatingOrder">
             <option *ngFor="let state of availableStates" [value]="state">
               {{ getOrderStatusText(state) }}
             </option>
           </select>
-          
+
           <div *ngIf="orderToUpdate" class="state-transition-info">
             <small>
-              Estado actual: 
+              Estado actual:
               <span class="status-badge {{ getStatusClass(newOrderState) }}">
                 {{ getOrderStatusText(newOrderState) }}
               </span>
@@ -46,16 +41,10 @@
       </div>
 
       <div class="modal-actions">
-        <button 
-          (click)="closeStatusModal()" 
-          class="btn-secondary"
-          [disabled]="updatingOrder">
+        <button (click)="closeStatusModal()" class="btn-secondary" [disabled]="updatingOrder">
           Cancelar
         </button>
-        <button 
-          (click)="updateOrderStatus()" 
-          class="btn-primary"
-          [disabled]="updatingOrder"
+        <button (click)="updateOrderStatus()" class="btn-primary" [disabled]="updatingOrder"
           [class.btn-disabled]="updatingOrder">
           <span *ngIf="updatingOrder" class="loading-text">
             <div class="small-spinner"></div>
@@ -74,7 +63,7 @@
         <h3>Detalle de Orden #{{ selectedOrder?.ordID }}</h3>
         <button (click)="closeOrderDetail()" class="modal-close">×</button>
       </div>
-      
+
       <div class="modal-body">
         <div *ngIf="loadingDetails" class="loading-state">
           <div class="loading-spinner"></div>
@@ -143,9 +132,7 @@
             <div class="products-list">
               <div *ngFor="let item of selectedOrder.items" class="product-item">
                 <div class="product-image">
-                  <img [src]="item.proImg || 'assets/images/placeholder.jpg'" 
-                      [alt]="item.proName"
-                      class="product-img">
+                  <img [src]="item.proImg || 'assets/images/placeholder.jpg'" [alt]="item.proName" class="product-img">
                 </div>
                 <div class="product-details">
                   <h5>{{ item.proName || 'Producto' }}</h5>
@@ -180,14 +167,11 @@
 
           <!-- Acciones del Admin -->
           <section class="detail-actions">
-            <button 
-              (click)="openStatusModal(selectedOrder)" 
-              class="btn-primary">
-               Cambiar Estado
+            <button *ngIf="selectedOrder.ordState !== 'Delivered' && selectedOrder.ordState !== 'Cancelled'"
+              (click)="openStatusModal(selectedOrder)" class="btn-primary">
+              Cambiar Estado
             </button>
-            <button 
-              (click)="closeOrderDetail()" 
-              class="btn-secondary">
+            <button (click)="closeOrderDetail()" class="btn-secondary">
               Cerrar
             </button>
           </section>
@@ -208,7 +192,7 @@
           ← Volver al Dashboard
         </button>
         <button (click)="loadAllOrders()" class="btn-outline" [disabled]="loading">
-           Actualizar
+          Actualizar
         </button>
       </div>
     </header>
@@ -221,18 +205,14 @@
 
     <!-- Contenido cuando no está loading -->
     <div *ngIf="!loading" class="admin-content">
-      
+
       <!-- Filtros y Búsqueda -->
       <div class="filters-section">
         <div class="search-box">
-          <input 
-            type="text" 
-            [(ngModel)]="searchTerm" 
-            (input)="applyFilters()"
-            placeholder="Buscar por ID, total o método de pago..."
-            class="search-input">
+          <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
+            placeholder="Buscar por ID, total o método de pago..." class="search-input">
         </div>
-        
+
         <div class="filter-group">
           <select [(ngModel)]="filterStatus" (change)="applyFilters()" class="status-filter">
             <option value="all">Todos los estados</option>
@@ -283,18 +263,12 @@
               <td class="payment-type">{{ order.paymentType }}</td>
               <td class="item-count">{{ order.itemCount }}</td>
               <td class="actions">
-                <button 
-                  (click)="openStatusModal(order)" 
-                  class="btn-outline btn-sm"
-                  title="Cambiar estado"
+                <button (click)="openStatusModal(order)" class="btn-outline btn-sm" title="Cambiar estado"
                   [disabled]="order.ordState === 'Delivered' || order.ordState === 'Cancelled'">
-                   Estado
+                  Estado
                 </button>
-                <button 
-                  (click)="viewOrderDetail(order.ordID)" 
-                  class="btn-secondary btn-sm"
-                  title="Ver detalles">
-                   Detalles
+                <button (click)="viewOrderDetail(order.ordID)" class="btn-secondary btn-sm" title="Ver detalles">
+                  Detalles
                 </button>
               </td>
             </tr>
@@ -303,21 +277,15 @@
 
         <!-- Paginación -->
         <div *ngIf="totalPages > 1" class="pagination">
-          <button 
-            (click)="changePage(currentPage - 1)" 
-            [disabled]="currentPage === 1"
-            class="page-btn">
+          <button (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1" class="page-btn">
             ← Anterior
           </button>
-          
+
           <span class="page-info">
             Página {{ currentPage }} de {{ totalPages }}
           </span>
-          
-          <button 
-            (click)="changePage(currentPage + 1)" 
-            [disabled]="currentPage === totalPages"
-            class="page-btn">
+
+          <button (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages" class="page-btn">
             Siguiente →
           </button>
         </div>
@@ -334,7 +302,7 @@
           No hay órdenes en el sistema
         </p>
         <button (click)="loadAllOrders()" class="btn-primary">
-           Recargar
+          Recargar
         </button>
       </div>
     </div>

@@ -33,13 +33,13 @@
             <div class="item-details">
               <h4>{{ item.proCode.proName }}</h4>
               <p class="item-brand">{{ item.proCode.proMark }}</p>
-              <p class="item-price">{{ formatPrice(item.proCode.proPrice) }}</p>
+              <p class="item-price">{{ formatPrice(item.sellingPrice ?? item.proCode.proPrice) }}</p>
             </div>
             <div class="item-quantity">
               <span>Cantidad: {{ item.quantity }}</span>
             </div>
             <div class="item-subtotal">
-              <strong>{{ formatPrice(item.quantity * item.proCode.proPrice) }}</strong>
+              <strong>{{ formatPrice(item.quantity * (item.sellingPrice ?? item.proCode.proPrice)) }}</strong>
             </div>
           </div>
         </div>

@@ -62,4 +62,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Mensaje cuando no hay productos -->
+  <div *ngIf="filteredItems.length === 0 && !loading" class="no-products-message">
+    <div class="no-products-icon">📦</div>
+    <h2>No hay productos disponibles</h2>
+    <p *ngIf="selectedTypeId">No se encontraron productos en esta categoría</p>
+    <p *ngIf="!selectedTypeId">No hay productos disponibles en este momento</p>
+    <button (click)="resetFilters()" class="btn-reset-filters">
+      Ver todos los productos
+    </button>
+  </div>
 </div>

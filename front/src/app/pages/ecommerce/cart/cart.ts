@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CartService, Cart, CartResponse, CartItemDTO } from '../../../services/cart.service';
@@ -6,9 +6,10 @@ import { AuthService } from '../../../services/auth.service';
 import { InventoryService, InventoryItem } from '../../../services/inventory.service';
 import { forkJoin } from 'rxjs';
 
-// Interface extendida para incluir información de stock
+// Interface extendida para incluir información de stock y precio de venta
 interface CartItemWithStock extends Cart {
   availableStock?: number;
+  sellingPrice?: number;
 }
 
 @Component({
@@ -18,7 +19,7 @@ interface CartItemWithStock extends Cart {
   templateUrl: './cart.html',
   styleUrls: ['./cart.css']
 })
-export class CartComponent implements OnInit {
+export class CartComponent implements OnInit, OnDestroy {
   cartItems: CartItemWithStock[] = [];
   totalAmount: number = 0;
   itemCount: number = 0;
@@ -30,6 +31,7 @@ export class CartComponent implements OnInit {
     message: '',
     type: 'success' as 'success' | 'error' | 'warning'
   };
+  private toastTimeout: any = null;
 
   // Sistema de Modal de Confirmación
   modal = {
@@ -97,7 +99,7 @@ export class CartComponent implements OnInit {
     // Obtener todo el inventario disponible
     this.inventoryService.getAvailableInventoryPLSQL().subscribe({
       next: (inventory: InventoryItem[]) => {
-        // Mapear los items del carrito con su stock correspondiente
+        // Mapear los items del carrito con su stock y precio de venta correspondiente
         this.cartItems = items.map(cartItem => {
           // Buscar el item del inventario que corresponde a este producto
           const inventoryItem = inventory.find(
@@ -106,21 +108,39 @@ export class CartComponent implements OnInit {
           
           return {
             ...cartItem,
-            availableStock: inventoryItem?.invStock || 0
+            availableStock: inventoryItem?.invStock || 0,
+            sellingPrice: inventoryItem?.sellingPrice || cartItem.proCode.proPrice
           };
         });
         
-        console.log('🛒 Cart items con stock:', this.cartItems);
+        // Recalcular el total con los precios de venta correctos
+        this.recalculateCartTotal();
+        
+        console.log('🛒 Cart items con stock y precio de venta:', this.cartItems);
         this.loading = false;
       },
       error: (err) => {
         console.error('Error cargando inventario para stock:', err);
-        // Si falla, mostrar los items sin información de stock
-        this.cartItems = items.map(item => ({ ...item, availableStock: 0 }));
+        // Si falla, mostrar los items sin información de stock, usar proPrice como fallback
+        this.cartItems = items.map(item => ({ 
+          ...item, 
+          availableStock: 0,
+          sellingPrice: item.proCode.proPrice
+        }));
+        // Recalcular el total con los precios base
+        this.recalculateCartTotal();
         this.showToast('Advertencia: No se pudo cargar información de stock', 'warning');
         this.loading = false;
       }
     });
+  }
+
+  // Recalcular el total del carrito basado en sellingPrice
+  recalculateCartTotal(): void {
+    this.totalAmount = this.cartItems.reduce((total, item) => {
+      const price = item.sellingPrice ?? item.proCode.proPrice;
+      return total + (price * item.quantity);
+    }, 0);
   }
 
   incrementQuantity(item: CartItemWithStock): void {
@@ -256,14 +276,21 @@ export class CartComponent implements OnInit {
 
   // Métodos para Toast
   showToast(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    // Limpiar el timeout anterior si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
+
     this.toast = {
       show: true,
       message,
       type
     };
 
-    setTimeout(() => {
+    // Ocultar automáticamente después de 3 segundos
+    this.toastTimeout = setTimeout(() => {
       this.toast.show = false;
+      this.toastTimeout = null;
     }, 3000);
   }
 
@@ -304,5 +331,12 @@ export class CartComponent implements OnInit {
       currency: 'COP',
       minimumFractionDigits: 0
     }).format(price);
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar el timeout del toast si existe
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout);
+    }
   }
 }

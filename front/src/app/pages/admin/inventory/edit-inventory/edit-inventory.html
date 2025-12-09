@@ -168,7 +168,12 @@
       <label>Fecha de Inventario</label>
       <input formControlName="invDate" type="date" />
       <div *ngIf="submitted && inventoryForm.controls['invDate'].invalid" class="error-message">
-        <small>La fecha de inventario es obligatoria.</small>
+        <small *ngIf="inventoryForm.controls['invDate'].errors?.['required']">
+          La fecha de inventario es obligatoria.
+        </small>
+        <small *ngIf="inventoryForm.controls['invDate'].errors?.['dateOlderThanOneYear']">
+          La fecha no puede ser anterior a 1 año.
+        </small>
       </div>
     </div>
 

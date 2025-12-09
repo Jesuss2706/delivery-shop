@@ -55,7 +55,7 @@ export class StoreLayoutComponent implements OnInit, OnDestroy {
     });
   }
 
-  // AGREGAR: Limpiar suscripción al destruir el componente
+  
   ngOnDestroy(): void {
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();

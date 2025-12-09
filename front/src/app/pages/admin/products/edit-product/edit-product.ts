@@ -40,7 +40,7 @@ export class EditProductComponent implements OnInit {
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(30),
+          Validators.maxLength(50),
           Validators.pattern(/^(?!\s*$)[A-Za-z0-9\s]+$/),
         ],
       ],
@@ -49,7 +49,7 @@ export class EditProductComponent implements OnInit {
         [
           Validators.required,
           Validators.minLength(5),
-          Validators.maxLength(50),
+          Validators.maxLength(100),
           Validators.pattern(/^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ.,()]+$/)
         ],
       ],

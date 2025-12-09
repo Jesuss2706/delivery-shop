@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CheckoutService, OrderSummaryDTO, OrderDetailDTO } from '../../../services/checkout.service';
 import { AuthService } from '../../../services/auth.service';
+import { InventoryService, InventoryItem } from '../../../services/inventory.service';
 
 @Component({
   selector: 'app-order',
@@ -45,6 +46,7 @@ export class OrderComponent implements OnInit {
   constructor(
     private checkoutService: CheckoutService,
     private authService: AuthService,
+    private inventoryService: InventoryService,
     private router: Router
   ) {}
 
@@ -75,13 +77,69 @@ export class OrderComponent implements OnInit {
     this.checkoutService.getOrderHistory(this.userID).subscribe({
       next: (orders: OrderSummaryDTO[]) => {
         console.log('✅ Historial cargado:', orders);
-        this.orders = orders;
-        this.loading = false;
         
-        if (orders.length === 0) {
-          console.log('📭 No hay órdenes para mostrar');
-          this.showToast('No tienes órdenes realizadas');
-        }
+        // Cargar inventario una sola vez para todos los totales
+        this.inventoryService.getAvailableInventoryPLSQL().subscribe({
+          next: (inventory: InventoryItem[]) => {
+            // Para cada orden, cargar sus detalles para recalcular el total
+            this.orders = orders;
+            
+            // Cargar detalles de todas las órdenes en paralelo
+            const detailRequests = orders.map(order => 
+              new Promise<void>((resolve) => {
+                this.checkoutService.getOrderDetail(order.ordID).subscribe({
+                  next: (orderDetail: OrderDetailDTO) => {
+                    // Recalcular el total basado en inventario
+                    if (orderDetail.items) {
+                      let newTotal = 0;
+                      orderDetail.items.forEach(item => {
+                        const inventoryItem = inventory.find(
+                          inv => inv.product.proCode === item.proCode
+                        );
+                        if (inventoryItem) {
+                          const unitPrice = Number(inventoryItem.sellingPrice);
+                          const subtotal = unitPrice * (item.quantity || 1);
+                          newTotal += subtotal;
+                        } else {
+                          newTotal += item.subtotal || 0;
+                        }
+                      });
+                      
+                      // Actualizar el total en la orden
+                      const orderToUpdate = this.orders.find(o => o.ordID === order.ordID);
+                      if (orderToUpdate) {
+                        orderToUpdate.total = newTotal;
+                      }
+                    }
+                    resolve();
+                  },
+                  error: () => {
+                    // Si falla, dejar el total del backend
+                    resolve();
+                  }
+                });
+              })
+            );
+            
+            // Esperar a que todos se carguen
+            Promise.all(detailRequests).then(() => {
+              this.loading = false;
+              if (orders.length === 0) {
+                console.log('📭 No hay órdenes para mostrar');
+                this.showToast('No tienes órdenes realizadas');
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error cargando inventario:', err);
+            // Si falla inventario, usar los totales del backend
+            this.orders = orders;
+            this.loading = false;
+            if (orders.length === 0) {
+              this.showToast('No tienes órdenes realizadas');
+            }
+          }
+        });
       },
       error: (err) => {
         console.error('❌ Error cargando historial de órdenes:', err);
@@ -178,8 +236,49 @@ export class OrderComponent implements OnInit {
     
     this.checkoutService.getOrderDetail(ordID).subscribe({
       next: (orderDetail: OrderDetailDTO) => {
-        this.orderDetails.set(ordID, orderDetail);
-        this.loadingDetails.delete(ordID);
+        // Cargar inventario para enriquecer con precios de venta
+        this.inventoryService.getAvailableInventoryPLSQL().subscribe({
+          next: (inventory: InventoryItem[]) => {
+            // Enriquecer los detalles con sellingPrice
+            if (orderDetail.items) {
+              orderDetail.items = orderDetail.items.map(item => {
+                // Buscar el inventario correspondiente por código de producto
+                const inventoryItem = inventory.find(
+                  inv => inv.product.proCode === item.proCode
+                );
+                
+                // Actualizar unitPrice y subtotal con sellingPrice si está disponible
+                if (inventoryItem) {
+                  item.unitPrice = Number(inventoryItem.sellingPrice);
+                  item.subtotal = item.unitPrice * (item.quantity || 1);
+                }
+                
+                return item;
+              });
+              
+              // Recalcular el total de la orden
+              const newTotal = orderDetail.items.reduce((sum, item) => 
+                sum + (item.subtotal || 0), 0
+              );
+              orderDetail.total = newTotal;
+              
+              // Actualizar también el total en la orden del listado
+              const orderInList = this.orders.find(o => o.ordID === ordID);
+              if (orderInList) {
+                orderInList.total = newTotal;
+              }
+            }
+            
+            this.orderDetails.set(ordID, orderDetail);
+            this.loadingDetails.delete(ordID);
+          },
+          error: (err) => {
+            console.error('Error cargando inventario:', err);
+            // Si falla cargar inventario, usar los datos del backend como fallback
+            this.orderDetails.set(ordID, orderDetail);
+            this.loadingDetails.delete(ordID);
+          }
+        });
       },
       error: (err) => {
         console.error('Error cargando detalle de orden:', err);
