@@ -51,7 +51,7 @@ Asegúrate de tener instalado lo siguiente:
 
 ### 1. Clonar el repositorio
 ```
-git clone https://github.com/tu-usuario/delivery-shop.git
+git clone https://github.com/Jesuss2706/delivery-shop.git
 cd delivery-shop
 ```
 
