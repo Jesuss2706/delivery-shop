@@ -1,4 +1,3 @@
-# delivery-shop
 # Delivery Shop
 
 Delivery Shop es una aplicación web de compras que permite a los usuarios explorar productos, agregarlos al carrito y realizar pedidos en línea de forma rápida y sencilla.  
