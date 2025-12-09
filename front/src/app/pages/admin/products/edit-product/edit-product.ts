@@ -29,39 +29,44 @@ export class EditProductComponent implements OnInit {
     private productService: ProductService,
     private route: ActivatedRoute,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // === VALIDACIONES ===
     this.productForm = this.fb.group({
       proCode: [{ value: '', disabled: true }],
+
       proName: [
         '',
         [
           Validators.required,
           Validators.minLength(2),
           Validators.maxLength(50),
-          Validators.pattern(/^(?!\s*$)[A-Za-z0-9\s]+$/),
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9 ]+$/),
         ],
       ],
+
       descript: [
         '',
         [
           Validators.required,
           Validators.minLength(5),
           Validators.maxLength(100),
-          Validators.pattern(/^[A-Za-z0-9\sáéíóúÁÉÍÓÚñÑ.,()]+$/)
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9 .,;:¿?¡!()\-]+$/),
         ],
       ],
+
       proMark: [
         '',
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(20),
-          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/),
+          Validators.maxLength(30),
+
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ ]+$/),
         ],
       ],
+
       proPrice: [
         '',
         [
@@ -71,6 +76,7 @@ export class EditProductComponent implements OnInit {
           Validators.pattern(/^\d{1,8}$/),
         ],
       ],
+
       proImg: [
         '',
         [
@@ -80,9 +86,12 @@ export class EditProductComponent implements OnInit {
           ),
         ],
       ],
+
       typeCode: ['', Validators.required],
       status: ['A', Validators.required],
     });
+
+
 
     // === CARGAR TIPOS DE PRODUCTO ===
     this.productService.getProductTypes().subscribe({

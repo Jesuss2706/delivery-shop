@@ -25,12 +25,7 @@
 
     <!-- Nombre -->
     <label>Nombre</label>
-    <input
-      formControlName="proName"
-      type="text"
-      maxlength="50"
-      placeholder="Ej: iPhone 15 Pro"
-    />
+    <input formControlName="proName" type="text" maxlength="50" placeholder="Ej: iPhone 15 Pro" />
     <div *ngIf="submitted && productForm.controls['proName'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proName'].errors?.['required']">El nombre es obligatorio.</small>
       <small *ngIf="productForm.controls['proName'].errors?.['minlength']">Debe tener al menos 2 caracteres.</small>
@@ -39,12 +34,7 @@
 
     <!-- Descripción -->
     <label>Descripción</label>
-    <textarea
-      formControlName="descript"
-      placeholder="Describe el producto..."
-      rows="4"
-      maxlength="100"
-    ></textarea>
+    <textarea formControlName="descript" placeholder="Describe el producto..." rows="4" maxlength="100"></textarea>
     <div *ngIf="submitted && productForm.controls['descript'].invalid" class="error-message">
       <small *ngIf="productForm.controls['descript'].errors?.['required']">La descripción es obligatoria.</small>
       <small *ngIf="productForm.controls['descript'].errors?.['minlength']">Debe tener al menos 5 caracteres.</small>
@@ -52,12 +42,7 @@
 
     <!-- Marca -->
     <label>Marca</label>
-    <input
-      formControlName="proMark"
-      type="text"
-      maxlength="30"
-      placeholder="Ej: Apple"
-    />
+    <input formControlName="proMark" type="text" maxlength="30" placeholder="Ej: Apple" />
     <div *ngIf="submitted && productForm.controls['proMark'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proMark'].errors?.['required']">La marca es obligatoria.</small>
       <small *ngIf="productForm.controls['proMark'].errors?.['minlength']">Debe tener al menos 2 caracteres.</small>
@@ -66,14 +51,8 @@
 
     <!-- Precio -->
     <label>Precio</label>
-    <input
-      formControlName="proPrice"
-      type="number"
-      placeholder="Ej: 5999"
-      (keypress)="onlyNumbers($event)"
-      min="1"
-      max="20000000"
-    />
+    <input formControlName="proPrice" type="number" placeholder="Ej: 5999" (keypress)="onlyNumbers($event)" min="1"
+      max="20000000" />
     <div *ngIf="submitted && productForm.controls['proPrice'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proPrice'].errors?.['required']">El precio es obligatorio.</small>
       <small *ngIf="productForm.controls['proPrice'].errors?.['min']">Debe ser mayor que 0.</small>
@@ -95,15 +74,12 @@
 
     <!-- Imagen -->
     <label>URL Imagen</label>
-    <input
-      formControlName="proImg"
-      type="url"
-      placeholder="https://imagen.com/ejemplo.jpg"
-      pattern="https?://.+"
-    />
+    <input formControlName="proImg" type="url" placeholder="https://imagen.com/ejemplo.jpg" pattern="https?://.+"
+      maxlength="500" />
     <div *ngIf="submitted && productForm.controls['proImg'].invalid" class="error-message">
       <small *ngIf="productForm.controls['proImg'].errors?.['required']">La URL de imagen es obligatoria.</small>
       <small *ngIf="productForm.controls['proImg'].errors?.['pattern']">Debe ser una URL válida (https://...)</small>
+      <small *ngIf="productForm.controls['proImg'].errors?.['maxlength']">Máximo 500 caracteres.</small>
     </div>
 
     <!-- Estado -->
@@ -164,17 +140,9 @@
 
 <!-- TOAST -->
 <div *ngIf="showToast" class="toast" [ngClass]="toastType">
-  <img
-    *ngIf="toastType === 'success'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-    alt="Éxito"
-  />
-  <img
-    *ngIf="toastType === 'error'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
-    alt="Error"
-  />
+  <img *ngIf="toastType === 'success'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+    alt="Éxito" />
+  <img *ngIf="toastType === 'error'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+    alt="Error" />
   <p>{{ toastMessage }}</p>
 </div>

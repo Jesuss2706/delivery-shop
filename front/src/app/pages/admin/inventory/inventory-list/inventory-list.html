@@ -5,15 +5,9 @@
 
 <div class="list-container" *ngIf="!loading">
   <div class="header-section">
+
     <button type="button" class="back-button" (click)="goBack()">
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="19" y1="12" x2="5" y2="12"></line>
         <polyline points="12 19 5 12 12 5"></polyline>
       </svg>
@@ -25,19 +19,57 @@
       <p class="subtitle">Administra el stock y precios de los productos disponibles</p>
     </div>
   </div>
+  <!-- Category Filter Section -->
+  <div class="filter-section" *ngIf="categories.length > 0">
+    <div class="filter-container">
+      <label for="category-filter" class="filter-label">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293-.707L3.293 7.293A1 1 0 0 1 3 6.586V4z">
+          </path>
+        </svg>
+        Filtrar por categoría:
+      </label>
+      <select id="category-filter" class="filter-select" [value]="selectedCategory || ''"
+        (change)="onFilterChange($event)">
+        <option value="">Todas las categorías</option>
+        <option *ngFor="let category of categories" [value]="category.typeCode">
+          {{ category.typeName }}
+        </option>
+      </select>
+      <button class="btn-reset-filter" *ngIf="selectedCategory" (click)="resetFilters()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 4v6h6M23 20v-6h-6"></path>
+          <path d="M20.49 9A9 9 0 0 0 5.64 5.64M3.51 15A9 9 0 0 0 18.36 18.36"></path>
+        </svg>
+        Limpiar filtro
+      </button>
+    </div>
+    <div class="filter-info" *ngIf="selectedCategory">
+      <p>Mostrando {{ inventoryItems.length }} productos en esta categoría</p>
+    </div>
+  </div>
 
   <div class="empty-state" *ngIf="inventoryItems.length === 0">
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path
-        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-      ></path>
+        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+      </path>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+      <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+    <h3>No hay items en el inventario</h3>
+    <p *ngIf="!selectedCategory">Aún no se han registrado productos con stock disponible</p>
+    <p *ngIf="selectedCategory">No hay productos en esta categoría</p>
+    <button *ngIf="selectedCategory" class="btn-reset-empty" (click)="resetFilters()">
+      Limpiar filtro
+    </button>
+  </div>
+  <div class="empty-state" *ngIf="inventoryItems.length === 0">
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path
+        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+      </path>
       <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
       <line x1="12" y1="22.08" x2="12" y2="12"></line>
     </svg>
@@ -59,14 +91,7 @@
       <div class="product-info">
         <h3 class="product-name">{{ item.product.proName }}</h3>
         <p class="product-brand">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
@@ -77,17 +102,10 @@
         <div class="inventory-details">
           <div class="detail-row">
             <div class="detail-item">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path
-                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                ></path>
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                </path>
               </svg>
               <div class="detail-content">
                 <span class="detail-label">Stock</span>
@@ -96,14 +114,7 @@
             </div>
 
             <div class="detail-item">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="1" x2="12" y2="23"></line>
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
               </svg>
@@ -116,14 +127,7 @@
 
           <div class="detail-row">
             <div class="detail-item">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -136,14 +140,7 @@
             </div>
 
             <div class="detail-item" *ngIf="item.provider">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                 <circle cx="8.5" cy="7" r="4"></circle>
                 <polyline points="17 11 19 13 23 9"></polyline>
@@ -157,14 +154,7 @@
 
           <div class="detail-row" *ngIf="item.product.proPrice">
             <div class="detail-item full-width">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M12 6v6l4 2"></path>
               </svg>
@@ -172,7 +162,7 @@
                 <span class="detail-label">Precio Base</span>
                 <span class="detail-value base-price">{{
                   formatPrice(item.product.proPrice)
-                }}</span>
+                  }}</span>
               </div>
             </div>
           </div>
@@ -181,14 +171,7 @@
 
       <div class="inventory-actions">
         <button class="btn-edit" (click)="editInventoryItem(item)">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
@@ -202,17 +185,9 @@
 
 
 <div *ngIf="showToast" class="toast" [ngClass]="toastType">
-  <img
-    *ngIf="toastType === 'success'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
-    alt="Éxito"
-  />
-  <img
-    *ngIf="toastType === 'error'"
-    class="toast-icon"
-    src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
-    alt="Error"
-  />
+  <img *ngIf="toastType === 'success'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/845/845646.png"
+    alt="Éxito" />
+  <img *ngIf="toastType === 'error'" class="toast-icon" src="https://cdn-icons-png.flaticon.com/512/463/463612.png"
+    alt="Error" />
   <p>{{ toastMessage }}</p>
 </div>

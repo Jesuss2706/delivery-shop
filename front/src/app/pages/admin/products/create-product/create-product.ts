@@ -22,24 +22,31 @@ export class CreateProductComponent implements OnInit {
   loadingTypes = true;
   submitted = false;
 
-  constructor(private fb: FormBuilder, private productService: ProductService) {}
+  constructor(private fb: FormBuilder, private productService: ProductService) { }
 
   ngOnInit(): void {
     this.productForm = this.fb.group({
+
+      proCode: [
+        '',
+        [
+          Validators.pattern(/^\d*$/),
+        ],
+      ],
       proName: [
         '',
         [
           Validators.required,
           Validators.minLength(2),
           Validators.maxLength(50),
-          Validators.pattern(/^(?!\s*$)[A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]{2,50}$/),
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9 ]*$/),
         ],
       ],
       proImg: [
         '',
         [
           Validators.required,
-          Validators.pattern(/^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg)|https?:\/\/.*)$/),
+          Validators.pattern(/^https?:\/\/.+$/),
         ],
       ],
       proPrice: [
@@ -48,7 +55,6 @@ export class CreateProductComponent implements OnInit {
           Validators.required,
           Validators.min(1),
           Validators.max(20000000),
-          Validators.pattern(/^\d{1,8}$/),
         ],
       ],
       proMark: [
@@ -56,8 +62,8 @@ export class CreateProductComponent implements OnInit {
         [
           Validators.required,
           Validators.minLength(2),
-          Validators.maxLength(20),
-          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ ]{2,20}$/),
+          Validators.maxLength(30),
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9 ]*$/),
         ],
       ],
       descript: [
@@ -66,7 +72,8 @@ export class CreateProductComponent implements OnInit {
           Validators.required,
           Validators.minLength(5),
           Validators.maxLength(100),
-          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ0-9 ]{5,100}$/),
+          // descripción completa: inicia con carácter válido y permite puntuación común
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9][A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9\s\.,;:¿\?¡!\(\)\-]*$/),
         ],
       ],
       typeCode: ['', Validators.required],
@@ -89,9 +96,21 @@ export class CreateProductComponent implements OnInit {
     });
   }
 
+  // permite solo números pero deja pasar teclas de control (backspace, flechas, ctrl/cmd, tab)
   onlyNumbers(event: KeyboardEvent) {
-    const charCode = event.which ? event.which : event.keyCode;
-    if (charCode < 48 || charCode > 57) {
+    const key = event.key;
+    const isControlKey =
+      key === 'Backspace' ||
+      key === 'ArrowLeft' ||
+      key === 'ArrowRight' ||
+      key === 'Delete' ||
+      key === 'Tab' ||
+      key === 'Home' ||
+      key === 'End' ||
+      (event.ctrlKey || event.metaKey);
+
+    if (isControlKey) return;
+    if (!/^\d$/.test(key)) {
       event.preventDefault();
     }
   }
@@ -104,15 +123,19 @@ export class CreateProductComponent implements OnInit {
     }
 
     const productData = this.productForm.value;
-    const selectedType = this.productTypes.find((t) => t.typeCode === Number(productData.typeCode));
+    // si typeCode en productTypes es number, convertir; si es string, no usar Number.
+    const selectedType = this.productTypes.find((t) => String(t.typeCode) === String(productData.typeCode));
 
     if (!selectedType) {
       this.errorMessage = 'Tipo de producto inválido.';
       return;
     }
 
+    // evita NaN si proCode no fue llenado: solo incluirlo si es válido
+    const proCodeNumber = productData.proCode ? Number(productData.proCode) : undefined;
+
     const newProduct: Product = {
-      proCode: Number(productData.proCode),
+      ...(proCodeNumber !== undefined ? { proCode: proCodeNumber } : {}),
       proName: productData.proName.trim(),
       descript: productData.descript.trim(),
       proImg: productData.proImg.trim(),
@@ -120,7 +143,7 @@ export class CreateProductComponent implements OnInit {
       proPrice: Number(productData.proPrice),
       productType: selectedType,
       status: productData.status,
-    };
+    } as Product;
 
     this.productService.createProduct(newProduct).subscribe({
       next: () => {
@@ -137,6 +160,19 @@ export class CreateProductComponent implements OnInit {
         this.showToastMessage(backendError, 'error');
       },
     });
+  }
+
+  // helper para mensajes de error en la plantilla
+  getErrorMessage(controlName: string): string | null {
+    const control = this.productForm.get(controlName);
+    if (!control || !control.errors) return null;
+    if (control.errors['required']) return 'Este campo es obligatorio.';
+    if (control.errors['minlength']) return `Mínimo ${control.errors['minlength'].requiredLength} caracteres.`;
+    if (control.errors['maxlength']) return `Máximo ${control.errors['maxlength'].requiredLength} caracteres.`;
+    if (control.errors['pattern']) return 'Contiene caracteres no permitidos.';
+    if (control.errors['min']) return `Valor mínimo ${control.errors['min'].min}.`;
+    if (control.errors['max']) return `Valor máximo ${control.errors['max'].max}.`;
+    return 'Campo inválido.';
   }
 
   showToastMessage(message: string, type: 'success' | 'error'): void {
